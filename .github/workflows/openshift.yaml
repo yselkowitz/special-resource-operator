@@ -1,9 +1,6 @@
 name: openshift
 
 on: 
-  push:
-    paths-ignore:
-      - "**/README.md"
   pull_request:
     paths-ignore:
       - "**/README.md"
@@ -15,18 +12,18 @@ jobs:
     name: test-e2e
     runs-on: ubuntu-latest
     steps:
-    - name: wait for build to succeed
-      uses: fountainhead/action-wait-for-check@v1.0.0
-      id: wait-for-build
-      with:
-        intervalSeconds: 15
-        token: ${{ secrets.GITHUB_TOKEN }}
-        checkName: build
-        ref: ${{ github.event.pull_request.head.sha || github.sha }}
+#    - name: wait for build to succeed
+#      uses: fountainhead/action-wait-for-check@v1.0.0
+#      id: wait-for-build
+#      with:
+#        intervalSeconds: 15
+#        token: ${{ secrets.GITHUB_TOKEN }}
+#       checkName: build
+#       ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
-    - name: check for successfull build
-      if: steps.wait-for-build.outputs.conclusion != 'success'
-      run: exit 1
+#    - name: check for successfull build
+#      if: steps.wait-for-build.outputs.conclusion != 'success'
+#      run: exit 1
 
     - name: checkout
       uses: actions/checkout@v2
