@@ -4,7 +4,7 @@ PULLPOLICY       ?= IfNotPresent
 TAG              ?= $(shell git branch | grep \* | cut -d ' ' -f2)
 IMAGE            ?= quay.io/openshift-psap/special-resource-operator:$(TAG)
 CSPLIT           ?= csplit - --prefix="" --suppress-matched --suffix-format="%04d.yaml"  /---/ '{*}' --silent
-YAMLFILES        ?= $(shell   find ./ -type f -name "*.yaml" ! -path "./vendor/*" ! -path "./manifests/*")
+YAMLFILES        ?= $(shell   find manifests config/recipes -name "*.yaml")
 
 export PATH := go/bin:$(PATH)
 include config/recipes/Makefile
