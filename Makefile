@@ -9,7 +9,7 @@ YAMLFILES        ?= $(shell   find manifests config/recipes -name "*.yaml")
 export PATH := go/bin:$(PATH)
 include config/recipes/Makefile
 
-kube-lint: kube-linter
+kube-lint: manifests kube-linter
 	$(KUBELINTER) lint $(YAMLFILES)
 
 lint: golangci-lint
