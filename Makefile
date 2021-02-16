@@ -4,14 +4,19 @@ PULLPOLICY       ?= IfNotPresent
 TAG              ?= $(shell git branch | grep \* | cut -d ' ' -f2)
 IMAGE            ?= quay.io/openshift-psap/special-resource-operator:$(TAG)
 CSPLIT           ?= csplit - --prefix="" --suppress-matched --suffix-format="%04d.yaml"  /---/ '{*}' --silent
+YAMLFILES        ?= $(shell   find ./ -type f -name "*.yaml" ! -path "./vendor/*" ! -path "./manifests/*")
+
 export PATH := go/bin:$(PATH)
 include config/recipes/Makefile
+
+kube-lint: kube-linter
+	$(KUBELINTER) lint $(YAMLFILES)
 
 lint: golangci-lint
 	$(GOLANGCILINT) run -v --timeout 5m0s
 
 verify: fmt vet
-unit: 
+unit:
 	@echo "TODO UNIT TEST"
 
 go-deploy-manifests: manifests
@@ -20,7 +25,7 @@ go-deploy-manifests: manifests
 go-undeploy-manifests:
 	go run test/undeploy/undeploy.go -path ./manifests
 
-test-e2e-upgrade: go-deploy-manifests 
+test-e2e-upgrade: go-deploy-manifests
 
 test-e2e:
 	for d in basic; do \
@@ -65,26 +70,26 @@ manager: generate fmt vet
 run: generate fmt vet manifests-gen
 	go run -mod=vendor ./main.go
 
-configure: 
+configure:
 	# TODO kustomize cannot set name of namespace according to settings, hack TODO
 	cd config/namespace && sed -i 's/name: .*/name: $(NAMESPACE)/g' namespace.yaml
 	cd config/namespace && $(KUSTOMIZE) edit set namespace $(NAMESPACE)
 	cd config/default && $(KUSTOMIZE) edit set namespace $(NAMESPACE)
 	cd config/manager && $(KUSTOMIZE) edit set image controller=$(IMAGE)
 
-manifests: manifests-gen kustomize configure 
+manifests: manifests-gen kustomize configure
 	cd $@; $(KUSTOMIZE) build ../config/namespace | $(CSPLIT)
 	cd $@; bash ../scripts/rename.sh
 	cd $@; $(KUSTOMIZE) build ../config/cr > 0015_specialresource_special-resource-preamble.yaml
-	
+
 # Deploy controller in the configured Kubernetes cluster in ~/.kube/config
 deploy: manifests
 	$(KUSTOMIZE) build config/namespace | kubectl apply -f -
-	$(shell sleep 5) 
+	$(shell sleep 5)
 	$(KUSTOMIZE) build config/cr | kubectl apply -f -
 
 # If the CRD is deleted before the CRs the CRD finalizer will hang forever
-# The specialresource finalizer will not execute either 
+# The specialresource finalizer will not execute either
 undeploy: kustomize
 	@if [ ! -z $(kubectl get crd | grep specialresource) ]; then                     \
 		kubectl delete --ignore-not-found specialresource --all --all-namespaces; \
@@ -162,6 +167,21 @@ ifeq (, $(shell which golangci-lint))
 GOLANGCILINT=$(GOBIN)/golangci-lint
 else
 GOLANGCILINT=$(shell which golangci-lint)
+endif
+
+kube-linter:
+ifeq (, $(shell which kube-linter))
+	@{ \
+	set -e ;\
+	KUBELINTER_GEN_TMP_DIR=$$(mktemp -d) ;\
+	cd $$KUBELINTER_GEN_TMP_DIR ;\
+	go mod init tmp ;\
+	go get golang.stackrox.io/kube-linter/cmd/kube-linter ;\
+	rm -rf $$KUBELINTER_GEN_TMP_DIR ;\
+	}
+KUBELINTER=$(GOBIN)/kube-linter
+else
+KUBELINTER=$(shell which kube-linter)
 endif
 
 

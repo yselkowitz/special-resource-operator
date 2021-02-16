@@ -1,12 +1,12 @@
-name: lint
+name: go-lint
 
-on: 
+on:
   pull_request:
     paths-ignore:
       - "**/README.md"
   workflow_dispatch:
 
-jobs: 
+jobs:
   lint:
     name: golangci
     runs-on: ubuntu-latest
