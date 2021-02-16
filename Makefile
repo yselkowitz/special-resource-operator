@@ -1,7 +1,7 @@
 SPECIALRESOURCE  ?= driver-container-base
 NAMESPACE        ?= openshift-special-resource-operator
 PULLPOLICY       ?= IfNotPresent
-TAG              ?= $(shell git branch | grep \* | cut -d ' ' -f2)
+TAG              ?= $(shell git branch --show-current)
 IMAGE            ?= quay.io/openshift-psap/special-resource-operator:$(TAG)
 CSPLIT           ?= csplit - --prefix="" --suppress-matched --suffix-format="%04d.yaml"  /---/ '{*}' --silent
 YAMLFILES        ?= $(shell   find manifests config/recipes -name "*.yaml")
@@ -9,7 +9,7 @@ YAMLFILES        ?= $(shell   find manifests config/recipes -name "*.yaml")
 export PATH := go/bin:$(PATH)
 include config/recipes/Makefile
 
-kube-lint: manifests kube-linter
+kube-lint: kube-linter
 	$(KUBELINTER) lint $(YAMLFILES)
 
 lint: golangci-lint
