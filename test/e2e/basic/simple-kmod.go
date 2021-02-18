@@ -20,7 +20,7 @@ import (
 var _ = ginkgo.Describe("[basic][simple-kmod] create and deploy simple-kmod", func() {
 	const (
 		pollInterval = 5 * time.Second
-		waitDuration = 8 * time.Minute
+		waitDuration = 16 * time.Minute
 	)
 
 	cs := framework.NewClientSet()

@@ -6,7 +6,6 @@ IMAGE            ?= quay.io/openshift-psap/special-resource-operator:$(TAG)
 CSPLIT           ?= csplit - --prefix="" --suppress-matched --suffix-format="%04d.yaml"  /---/ '{*}' --silent
 YAMLFILES        ?= $(shell  find manifests config/recipes -name "*.yaml"  -not \( -path "config/recipes/lustre-client/*" -prune \) )
 
-
 export PATH := go/bin:$(PATH)
 include config/recipes/Makefile
 
