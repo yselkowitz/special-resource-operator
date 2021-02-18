@@ -19,8 +19,8 @@ import (
 
 var _ = ginkgo.Describe("[basic][simple-kmod] create and deploy simple-kmod", func() {
 	const (
-		pollInterval = 5 * time.Second
-		waitDuration = 16 * time.Minute
+		pollInterval = 10 * time.Second
+		waitDuration = 10 * time.Minute
 	)
 
 	cs := framework.NewClientSet()
@@ -55,6 +55,8 @@ var _ = ginkgo.Describe("[basic][simple-kmod] create and deploy simple-kmod", fu
 				return false, fmt.Errorf("Couldn't get driver-container-base pod, %v", err)
 			}
 
+			// Get logs of driverContainerBase
+			GetRecentPodLogs(driverContainerBase.GetName(), driverContainerBase.GetNamespace(), pollInterval)
 			if driverContainerBase.Status.Phase == "Succeeded" {
 				return true, nil
 			}
