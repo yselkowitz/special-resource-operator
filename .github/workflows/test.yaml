@@ -10,7 +10,7 @@ jobs:
   context:
     name: context
     runs-on: ubuntu-20.04
-    if: contains('ok-to-test', 'ok-to-test')
+    if: contains(toJSON(github.event.pull_request.labels), 'what-the-heck')
     steps:
     - name: Dump GitHub context
       env:
