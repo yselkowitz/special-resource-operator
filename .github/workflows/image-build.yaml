@@ -10,8 +10,12 @@ jobs:
   build:
     name: build
     runs-on: ubuntu-20.04
-    if: contains(github.event.pull_request.labels, 'ok-to-test')
+    if: contains(toJgithub.event.pull_request.labels, 'ok-to-test')
     steps:
+    - name: Dump GitHub context
+      env:
+        GITHUB_CONTEXT: ${{ toJSON(github) }}
+      run: echo "$GITHUB_CONTEXT" && exit 1
     - uses: actions/checkout@v2
       with:
         persist-credentials: false
