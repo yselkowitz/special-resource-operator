@@ -7,9 +7,7 @@ on:
 
 jobs:
   merge_job:
-    if: github.event.pull_request.merged == true &&
-        (contains(github.event.pull_request.labels.*.name, 'ok-to-test') ||
-        contains(github.repository, 'openshift-psap/special-resource-operator'))
+    if: github.event.pull_request.merged == true && (github.event.pull_request.labels.*.name == 'ok-to-test' || github.repository == 'openshift-psap/special-resource-operator')
     name: remove-pr-image-on-merge
     runs-on: ubuntu-latest
     steps:
