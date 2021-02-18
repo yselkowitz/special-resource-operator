@@ -10,9 +10,9 @@ jobs:
   context:
     name: context
     runs-on: ubuntu-20.04
-    if: contains('ok-to-test', 'ok-to-test')
+    if: contains('asdfasdfad', 'ok-to-test')
     steps:
     - name: Dump GitHub context
       env:
         GITHUB_CONTEXT: ${{ toJSON(github) }}
-      run: echo "$GITHUB_CONTEXT" && exit 1
+      run: echo "$GITHUB_CONTEXT"
