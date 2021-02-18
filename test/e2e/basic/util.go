@@ -92,10 +92,10 @@ func GetRecentPodLogs(name string, namespace string, interval time.Duration) err
 	err := cmd.Run()
 	if err != nil {
 		_, err = Logf("Error running command '%s %v':\n  out=%s\n err=%s\n  ret=%v", commandName, args, strings.TrimSpace(stdout.String()), strings.TrimSpace(stderr.String()), err)
+		return err
 	}
 
-	_, err = Logf("last %s of %s logs \n %s", fmt.Sprint(interval), name, strings.TrimSpace(stdout.String()))
-
+	_, err = Logf(strings.TrimSpace(stdout.String()))
 	return err
 }
 

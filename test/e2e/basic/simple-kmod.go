@@ -37,7 +37,7 @@ var _ = ginkgo.Describe("[basic][simple-kmod] create and deploy simple-kmod", fu
 		}
 		framework.CreateFromYAML(buffer, cl)
 
-		ginkgo.By("driver-container-base is completed")
+		ginkgo.By("waiting for completion driver-container-base build")
 		err = wait.PollImmediate(pollInterval, waitDuration, func() (bool, error) {
 
 			dcbPods, err := cs.Pods("driver-container-base").List(context.TODO(), metav1.ListOptions{})
@@ -56,7 +56,8 @@ var _ = ginkgo.Describe("[basic][simple-kmod] create and deploy simple-kmod", fu
 			}
 
 			// Get logs of driverContainerBase
-			GetRecentPodLogs(driverContainerBase.GetName(), driverContainerBase.GetNamespace(), pollInterval)
+			_ = GetRecentPodLogs(driverContainerBase.GetName(), driverContainerBase.GetNamespace(), pollInterval)
+
 			if driverContainerBase.Status.Phase == "Succeeded" {
 				return true, nil
 			}
@@ -65,7 +66,7 @@ var _ = ginkgo.Describe("[basic][simple-kmod] create and deploy simple-kmod", fu
 		})
 		gomega.Expect(err).NotTo(gomega.HaveOccurred(), explain)
 
-		ginkgo.By("simple-kmod is ready")
+		ginkgo.By("waiting for simple-kmod daemonset to be ready")
 		err = wait.PollImmediate(pollInterval, waitDuration, func() (bool, error) {
 			skDaemonSets, err := cs.DaemonSets("simple-kmod").List(context.TODO(), metav1.ListOptions{})
 			if err != nil {
