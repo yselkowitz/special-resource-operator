@@ -1,6 +1,9 @@
 name: image
 
 on:
+  pull_request:
+    paths-ignore:
+      - "**/README.md"
   pull_request_target:
     paths-ignore:
       - "**/README.md"
@@ -10,7 +13,7 @@ jobs:
   build:
     name: build
     runs-on: ubuntu-20.04
-    if: contains(toJgithub.event.pull_request.labels, 'ok-to-test')
+    if: contains(github.event.pull_request.labels, 'ok-to-test')
     steps:
     - name: Dump GitHub context
       env:
