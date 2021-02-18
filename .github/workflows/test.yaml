@@ -10,7 +10,7 @@ jobs:
   context:
     name: context
     runs-on: ubuntu-20.04
-    if: github.event.pull_request.labels.*.name == 'ok-to-test'
+    if: contains(toJSON(github.event.pull_request.labels),'ok-to-test')
     steps:
     - name: Dump GitHub context
       env:
