@@ -1,0 +1,17 @@
+name: test
+
+on:
+  pull_request:
+    paths-ignore:
+      - "**/README.md"
+  workflow_dispatch:
+
+jobs:
+  context:
+    name: context
+    runs-on: ubuntu-20.04
+    steps:
+    - name: Dump GitHub context
+      env:
+        GITHUB_CONTEXT: ${{ toJSON(github) }}
+      run: echo "$GITHUB_CONTEXT" && exit 1

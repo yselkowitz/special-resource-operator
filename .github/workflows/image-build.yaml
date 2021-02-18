@@ -1,9 +1,6 @@
 name: image
 
 on:
-  pull_request:
-    paths-ignore:
-      - "**/README.md"
   pull_request_target:
     paths-ignore:
       - "**/README.md"
