@@ -10,13 +10,9 @@ jobs:
   context:
     name: context
     runs-on: ubuntu-20.04
-    if: contains(toJSON(github.event.pull_request.labels), '"ok-to-test"')
+    if: contains(toJSON(github.event.pull_request.labels), '"ok-to-testtt"')
     steps:
     - name: Dump GitHub context
       env:
         GITHUB_CONTEXT: ${{ toJSON(github) }}
       run: echo "$GITHUB_CONTEXT"
-    - name: Dump GitHub Labels
-      env:
-        GITHUB_LABELS: ${{ github.event.pull_request.labels }}
-      run: echo "$GITHUB_LABELS"
