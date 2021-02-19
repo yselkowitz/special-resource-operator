@@ -1,13 +1,13 @@
 name: test
 
 on:
-  pull_request:
+  pull_request_target:
     paths-ignore:
       - "**/README.md"
   workflow_dispatch:
 
 jobs:
-  context:
+  ok-to-test:
     name: context
     runs-on: ubuntu-20.04
     if: contains(toJSON(github.event.pull_request.labels), '"ok-to-test",')
@@ -16,3 +16,13 @@ jobs:
       env:
         GITHUB_CONTEXT: ${{ toJSON(github) }}
         run: echo "github context:\n $GITHUB_CONTEXT"
+  repo-test:
+    name: build
+    runs-on: ubuntu-20.04
+    if: contains(github.repository, 'openshift-psap/special-resource-operator')
+    steps:
+    - name: Dump github context
+      env:
+        GITHUB_CONTEXT: ${{ toJSON(github) }}
+        run: echo "github context:\n $GITHUB_CONTEXT"
+
