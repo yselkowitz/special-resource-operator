@@ -16,7 +16,7 @@ jobs:
     - name: Dump GitHub context
       env:
         GITHUB_CONTEXT: ${{ toJSON(github) }}
-      run: echo "$GITHUB_CONTEXT" && exit 1
+      run: echo "$GITHUB_CONTEXT"
     - uses: actions/checkout@v2
       with:
         persist-credentials: false
