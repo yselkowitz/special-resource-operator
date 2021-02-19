@@ -8,21 +8,17 @@ on:
 
 jobs:
   ok-to-test:
-    name: context
+    name: ok-to-test
     runs-on: ubuntu-20.04
     if: contains(toJSON(github.event.pull_request.labels), '"ok-to-test",')
     steps:
-    - name: Dump GitHub context
-      env:
-        GITHUB_CONTEXT: ${{ toJSON(github) }}
-      run: echo "$GITHUB_CONTEXT"
+    - name: hello
+      run: echo "Hello World"
   repo-test:
     name: main-repo
     runs-on: ubuntu-20.04
     if: contains(github.repository, 'openshift-psap/special-resource-operator')
     steps:
-    - name: Dump github context
-      env:
-        GITHUB_CONTEXT: ${{ toJSON(github) }}
-      run: echo "$GITHUB_CONTEXT"
+    - name: hello
+      run: echo "Hello World"
 

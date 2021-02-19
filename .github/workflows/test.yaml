@@ -8,7 +8,7 @@ on:
 
 jobs:
   ok-to-test:
-    name: context
+    name: ok-to-test
     runs-on: ubuntu-20.04
     if: contains(toJSON(github.event.pull_request.labels), '"ok-to-test",')
     steps:
