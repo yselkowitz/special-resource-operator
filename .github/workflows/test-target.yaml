@@ -1,4 +1,4 @@
-name: test
+name: test-target
 
 on:
   pull_request_target:
