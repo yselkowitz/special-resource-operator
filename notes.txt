@@ -1,4 +1,3 @@
-
 # Patch for zapr
 
 func (l *noopInfoLogger) Error(err error, msg string, keysAndValues ...interface{}) {}
