@@ -1,5 +1,5 @@
-
 # Patch for zapr
+
 
 func (l *noopInfoLogger) Error(err error, msg string, keysAndValues ...interface{}) {}
 func (l *noopInfoLogger) V(level int) logr.Logger                                   { return &noopInfoLogger{} }
