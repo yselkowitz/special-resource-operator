@@ -5,65 +5,21 @@ import (
 	"context"
 	"html/template"
 	"sort"
+	"strings"
 
 	"github.com/go-logr/logr"
 	"github.com/openshift-psap/special-resource-operator/pkg/assets"
 	"github.com/openshift-psap/special-resource-operator/pkg/exit"
+	"github.com/openshift-psap/special-resource-operator/pkg/hash"
 	"github.com/openshift-psap/special-resource-operator/pkg/metrics"
 	"github.com/openshift-psap/special-resource-operator/pkg/yamlutil"
-	"github.com/pkg/errors"
 	errs "github.com/pkg/errors"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/yaml"
 )
-
-type nodes struct {
-	list  *unstructured.UnstructuredList
-	count int64
-}
-
-var (
-	node = nodes{
-		list:  &unstructured.UnstructuredList{},
-		count: 0xDEADBEEF,
-	}
-)
-
-func cacheNodes(r *SpecialResourceReconciler, force bool) (*unstructured.UnstructuredList, error) {
-
-	// The initial list is what we're working with
-	// a SharedInformer will update the list of nodes if
-	// more nodes join the cluster.
-	cached := int64(len(node.list.Items))
-	if cached == node.count && !force {
-		return node.list, nil
-	}
-
-	node.list.SetAPIVersion("v1")
-	node.list.SetKind("NodeList")
-
-	opts := []client.ListOption{}
-
-	// Only filter if we have a selector set, otherwise zero nodes will be
-	// returned and no labels can be extracted. Set the default worker label
-	// otherwise.
-	if len(r.specialresource.Spec.Node.Selector) > 0 {
-		opts = append(opts, client.MatchingLabels{r.specialresource.Spec.Node.Selector: "true"})
-	} else {
-		opts = append(opts, client.MatchingLabels{"node-role.kubernetes.io/worker": ""})
-	}
-
-	err := r.List(context.TODO(), node.list, opts...)
-	if err != nil {
-		return nil, errors.Wrap(err, "Client cannot get NodeList")
-	}
-
-	return node.list, err
-}
 
 func getHardwareConfiguration(r *SpecialResourceReconciler) (*unstructured.Unstructured, error) {
 
@@ -235,6 +191,7 @@ kind: Namespace
 metadata:
   annotations:
     specialresource.openshift.io/wait: "true"
+    openshift.io/cluster-monitoring: "true"
   name: `)
 
 	if r.specialresource.Spec.Namespace != "" {
@@ -276,7 +233,7 @@ func ReconcileHardwareConfigurations(r *SpecialResourceReconciler) error {
 
 	log.Info("Found Hardware Configuration States", "Name", config.GetName())
 
-	node.list, err = cacheNodes(r, false)
+	runInfo.Node.list, err = cacheNodes(r, false)
 	exit.OnError(errs.Wrap(err, "Failed to cache Nodes"))
 
 	getRuntimeInformation(r)
@@ -311,50 +268,104 @@ func createFromYAML(yamlFile []byte, r *SpecialResourceReconciler, namespace str
 
 		yamlSpec := scanner.Bytes()
 
-		// We can pass template information from the CR to the yamls
-		// thats why we are running 2 passes.
-		if err := templateRuntimeInformation(&yamlSpec, runInfo); err != nil {
-			return errs.Wrap(err, "Cannot inject runtime information 1st pass")
+		// We are kernel-affine if the yamlSpec uses {{.KernelFullVersion}}
+		// then we need to replicate the object and set a name + os + kernel version
+		kernelAffine := strings.Contains(string(yamlSpec), "{{.KernelFullVersion}}")
+
+		log.Info("KernelAffine", "upgradelen", len(runInfo.ClusterUpgradeInfo))
+
+		var version nodeUpgradeVersion
+		var replicas [][]byte // This is to keep track of the number of replicas
+		// and either to break or continue the for looop
+		for runInfo.KernelFullVersion, version = range runInfo.ClusterUpgradeInfo {
+
+			runInfo.ClusterVersionMajorMinor = version.clusterVersion
+			runInfo.OperatingSystemDecimal = version.rhelVersion
+
+			replicas = append(replicas, yamlSpec)
+
+			if kernelAffine {
+				log.Info("KernelAffine", "Len", len(runInfo.ClusterUpgradeInfo))
+				log.Info("KernelAffine", "kernel", runInfo.KernelFullVersion, "os-version", runInfo.OperatingSystemDecimal)
+			}
+
+			// We can pass template information from the CR to the yamls
+			// thats why we are running 2 passes.
+			if err := templateRuntimeInformation(&replicas[len(replicas)-1], runInfo); err != nil {
+				return errs.Wrap(err, "Cannot inject runtime information 1st pass")
+			}
+
+			if err := templateRuntimeInformation(&replicas[len(replicas)-1], runInfo); err != nil {
+				return errs.Wrap(err, "Cannot inject runtime information 2nd pass")
+			}
+
+			obj := &unstructured.Unstructured{}
+			jsonSpec, err := yaml.YAMLToJSON(replicas[len(replicas)-1])
+			if err != nil {
+				return errs.Wrap(err, "Could not convert yaml file to json"+string(yamlSpec))
+			}
+
+			err = obj.UnmarshalJSON(jsonSpec)
+			exit.OnError(errs.Wrap(err, "Cannot unmarshall json spec, check your manifests"))
+
+			if resourceIsNamespaced(obj.GetKind()) {
+				obj.SetNamespace(namespace)
+			}
+
+			if kernelAffine {
+				kernelVersion := strings.ReplaceAll(runInfo.KernelFullVersion, "_", "-")
+				hash64 := hash.FNV64a(runInfo.OperatingSystemMajorMinor + "-" + kernelVersion)
+				name := obj.GetName() + "-" + hash64
+				obj.SetName(name)
+
+				if obj.GetKind() == "DaemonSet" {
+					err := unstructured.SetNestedField(obj.Object, name, "metadata", "labels", "app")
+					exit.OnError(err)
+					err = unstructured.SetNestedField(obj.Object, name, "spec", "selector", "matchLabels", "app")
+					exit.OnError(err)
+					err = unstructured.SetNestedField(obj.Object, name, "spec", "template", "metadata", "labels", "app")
+					exit.OnError(err)
+					err = unstructured.SetNestedField(obj.Object, name, "spec", "template", "metadata", "labels", "app")
+					exit.OnError(err)
+				}
+
+				setKernelVersionNodeAffinity(obj)
+			}
+
+			// We are only building a driver-container if we cannot pull the image
+			// We are asuming that vendors provide pre compiled DriverContainers
+			// If err == nil, build a new container, if err != nil skip it
+			if err := rebuildDriverContainer(obj, r); err != nil {
+				log.Info("Skipping building driver-container", "Name", obj.GetName())
+				return nil
+			}
+
+			// The cluster has more then one kernel version running
+			// we're replicating the driver-container DaemonSet to
+			// the number of kernel versions running in the cluster
+			if len(runInfo.ClusterUpgradeInfo) == 0 {
+				exit.OnError(errs.New("No KernelVersion detected, something is wrong"))
+			}
+
+			// Callbacks before CRUD will update the manifests
+			if err := beforeCRUDhooks(obj, r); err != nil {
+				return errs.Wrap(err, "Before CRUD hooks failed")
+			}
+			// Create Update Delete Patch resources
+			err = CRUD(obj, r)
+			exit.OnError(errs.Wrap(err, "CRUD exited non-zero"))
+
+			// Callbacks after CRUD will wait for ressource and check status
+			// Only return if we have created all replicas otherwise
+			// we will reconcile only the first replica
+			if err := afterCRUDhooks(obj, r); err != nil && len(replicas) == len(runInfo.ClusterUpgradeInfo) {
+				return errs.Wrap(err, "After CRUD hooks failed")
+			}
+
+			if !kernelAffine {
+				break
+			}
 		}
-
-		if err := templateRuntimeInformation(&yamlSpec, runInfo); err != nil {
-			return errs.Wrap(err, "Cannot inject runtime information 2nd pass")
-		}
-
-		obj := &unstructured.Unstructured{}
-		jsonSpec, err := yaml.YAMLToJSON(yamlSpec)
-		if err != nil {
-			return errs.Wrap(err, "Could not convert yaml file to json"+string(yamlSpec))
-		}
-
-		err = obj.UnmarshalJSON(jsonSpec)
-		exit.OnError(errs.Wrap(err, "Cannot unmarshall json spec, check your manifests"))
-
-		if resourceNamespaced(obj.GetKind()) {
-			obj.SetNamespace(namespace)
-		}
-
-		// We are only building a driver-container if we cannot pull the image
-		// We are asuming that vendors provide pre compiled DriverContainers
-		// If err == nil, build a new container, if err != nil skip it
-		if err := rebuildDriverContainer(obj, r); err != nil {
-			log.Info("Skipping building driver-container", "Name", obj.GetName())
-			return nil
-		}
-
-		// Callbacks before CRUD will update the manifests
-		if err := beforeCRUDhooks(obj, r); err != nil {
-			return errs.Wrap(err, "Before CRUD hooks failed")
-		}
-		// Create Update Delete Patch resources
-		err = CRUD(obj, r)
-		exit.OnError(errs.Wrap(err, "CRUD exited non-zero"))
-
-		// Callbacks after CRUD will wait for ressource and check status
-		if err := afterCRUDhooks(obj, r); err != nil {
-			return errs.Wrap(err, "After CRUD hooks failed")
-		}
-
 	}
 
 	if err := scanner.Err(); err != nil {
@@ -404,7 +415,7 @@ func updateResourceVersion(req *unstructured.Unstructured, found *unstructured.U
 	return nil
 }
 
-func resourceNamespaced(kind string) bool {
+func resourceIsNamespaced(kind string) bool {
 	if kind == "Namespace" ||
 		kind == "ClusterRole" ||
 		kind == "ClusterRoleBinding" ||
@@ -419,7 +430,7 @@ func resourceNamespaced(kind string) bool {
 func CRUD(obj *unstructured.Unstructured, r *SpecialResourceReconciler) error {
 
 	var logger logr.Logger
-	if resourceNamespaced(obj.GetKind()) {
+	if resourceIsNamespaced(obj.GetKind()) {
 		logger = log.WithValues("Kind", obj.GetKind()+": "+obj.GetNamespace()+"/"+obj.GetName())
 	} else {
 		logger = log.WithValues("Kind", obj.GetKind()+": "+obj.GetName())

@@ -51,7 +51,7 @@ type SpecialResourceReconciler struct {
 
 // Reconcile Reconiliation entry point
 func (r *SpecialResourceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
-	return ReportSpecialResourcesStatus(r, req)
+	return UpgradeSpecialResource(r, req)
 }
 
 // SetupWithManager main initalization for manager

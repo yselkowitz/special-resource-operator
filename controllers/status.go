@@ -129,8 +129,7 @@ func (r *SpecialResourceReconciler) clusterOperatorUpdateRelatedObjects() error 
 	return nil
 }
 
-// ReportSpecialResourcesStatus 
-// Depending on what error we're getting from the
+// ReportSpecialResourcesStatus Depending on what error we're getting from the
 // reconciliation loop we're updating the status
 // nil -> All things good and default conditions can be applied
 func ReportSpecialResourcesStatus(r *SpecialResourceReconciler, req ctrl.Request) (ctrl.Result, error) {
