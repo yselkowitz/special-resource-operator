@@ -113,7 +113,7 @@ func logRuntimeInformation() {
 	log.Info("Runtime Information", "KernelPatchVersion", runInfo.KernelPatchVersion)
 	log.Info("Runtime Information", "ClusterVersion", runInfo.ClusterVersion)
 	log.Info("Runtime Information", "ClusterVersionMajorMinor", runInfo.ClusterVersionMajorMinor)
-	log.Info("Runtime Information", "UpgradeInfo", runInfo.ClusterUpgradeInfo)
+	log.Info("Runtime Information", "ClusterUpgradeInfo", runInfo.ClusterUpgradeInfo)
 	log.Info("Runtime Information", "UpdateVendor", runInfo.UpdateVendor)
 	log.Info("Runtime Information", "PushSecretName", runInfo.PushSecretName)
 	log.Info("Runtime Information", "OSImageURL", runInfo.OSImageURL)
@@ -169,7 +169,6 @@ func getOperatingSystem() (string, string, string, error) {
 	var nodeOSmin string
 
 	// Assuming all nodes are running the same os
-
 	os := "feature.node.kubernetes.io/system-os_release"
 
 	for _, node := range runInfo.Node.list.Items {

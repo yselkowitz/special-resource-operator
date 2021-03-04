@@ -260,6 +260,32 @@ func templateRuntimeInformation(yamlSpec *[]byte, r runtimeInformation) error {
 	return nil
 }
 
+func setKernelAffineAttributes(obj *unstructured.Unstructured, kernelAffinity bool) error {
+
+	if kernelAffinity {
+		kernelVersion := strings.ReplaceAll(runInfo.KernelFullVersion, "_", "-")
+		hash64 := hash.FNV64a(runInfo.OperatingSystemMajorMinor + "-" + kernelVersion)
+		name := obj.GetName() + "-" + hash64
+		obj.SetName(name)
+
+		if obj.GetKind() == "DaemonSet" {
+			err := unstructured.SetNestedField(obj.Object, name, "metadata", "labels", "app")
+			exit.OnError(err)
+			err = unstructured.SetNestedField(obj.Object, name, "spec", "selector", "matchLabels", "app")
+			exit.OnError(err)
+			err = unstructured.SetNestedField(obj.Object, name, "spec", "template", "metadata", "labels", "app")
+			exit.OnError(err)
+			err = unstructured.SetNestedField(obj.Object, name, "spec", "template", "metadata", "labels", "app")
+			exit.OnError(err)
+		}
+
+		if err := setKernelVersionNodeAffinity(obj); err != nil {
+			return errs.Wrap(err, "Cannot set kernel version node affinity for obj: "+obj.GetKind())
+		}
+	}
+	return nil
+}
+
 func createFromYAML(yamlFile []byte, r *SpecialResourceReconciler, namespace string) error {
 
 	scanner := yamlutil.NewYAMLScanner(yamlFile)
@@ -270,9 +296,7 @@ func createFromYAML(yamlFile []byte, r *SpecialResourceReconciler, namespace str
 
 		// We are kernel-affine if the yamlSpec uses {{.KernelFullVersion}}
 		// then we need to replicate the object and set a name + os + kernel version
-		kernelAffine := strings.Contains(string(yamlSpec), "{{.KernelFullVersion}}")
-
-		log.Info("KernelAffine", "upgradelen", len(runInfo.ClusterUpgradeInfo))
+		kernelAffinity := strings.Contains(string(yamlSpec), "{{.KernelFullVersion}}")
 
 		var version nodeUpgradeVersion
 		var replicas [][]byte // This is to keep track of the number of replicas
@@ -282,12 +306,14 @@ func createFromYAML(yamlFile []byte, r *SpecialResourceReconciler, namespace str
 			runInfo.ClusterVersionMajorMinor = version.clusterVersion
 			runInfo.OperatingSystemDecimal = version.rhelVersion
 
-			replicas = append(replicas, yamlSpec)
-
-			if kernelAffine {
-				log.Info("KernelAffine", "Len", len(runInfo.ClusterUpgradeInfo))
-				log.Info("KernelAffine", "kernel", runInfo.KernelFullVersion, "os-version", runInfo.OperatingSystemDecimal)
+			if kernelAffinity {
+				log.Info("ClusterUpgradeInfo",
+					"kernel", runInfo.KernelFullVersion,
+					"rhel", runInfo.OperatingSystemDecimal,
+					"cluster", runInfo.ClusterVersionMajorMinor)
 			}
+
+			replicas = append(replicas, yamlSpec)
 
 			// We can pass template information from the CR to the yamls
 			// thats why we are running 2 passes.
@@ -312,25 +338,9 @@ func createFromYAML(yamlFile []byte, r *SpecialResourceReconciler, namespace str
 				obj.SetNamespace(namespace)
 			}
 
-			if kernelAffine {
-				kernelVersion := strings.ReplaceAll(runInfo.KernelFullVersion, "_", "-")
-				hash64 := hash.FNV64a(runInfo.OperatingSystemMajorMinor + "-" + kernelVersion)
-				name := obj.GetName() + "-" + hash64
-				obj.SetName(name)
-
-				if obj.GetKind() == "DaemonSet" {
-					err := unstructured.SetNestedField(obj.Object, name, "metadata", "labels", "app")
-					exit.OnError(err)
-					err = unstructured.SetNestedField(obj.Object, name, "spec", "selector", "matchLabels", "app")
-					exit.OnError(err)
-					err = unstructured.SetNestedField(obj.Object, name, "spec", "template", "metadata", "labels", "app")
-					exit.OnError(err)
-					err = unstructured.SetNestedField(obj.Object, name, "spec", "template", "metadata", "labels", "app")
-					exit.OnError(err)
-				}
-
-				setKernelVersionNodeAffinity(obj)
-			}
+			// kenrel affinity related attributes
+			err = setKernelAffineAttributes(obj, kernelAffinity)
+			exit.OnError(errs.Wrap(err, "Cannot set kernel affine attributes"))
 
 			// We are only building a driver-container if we cannot pull the image
 			// We are asuming that vendors provide pre compiled DriverContainers
@@ -362,7 +372,7 @@ func createFromYAML(yamlFile []byte, r *SpecialResourceReconciler, namespace str
 				return errs.Wrap(err, "After CRUD hooks failed")
 			}
 
-			if !kernelAffine {
+			if !kernelAffinity {
 				break
 			}
 		}
