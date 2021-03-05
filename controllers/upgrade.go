@@ -18,8 +18,8 @@ type nodeUpgradeVersion struct {
 	clusterVersion string
 }
 
-// UpgradeSpecialResource upgrade special resources
-func UpgradeSpecialResource(r *SpecialResourceReconciler, req ctrl.Request) (ctrl.Result, error) {
+// SpecialResourceUpgrade upgrade special resources
+func SpecialResourceUpgrade(r *SpecialResourceReconciler, req ctrl.Request) (ctrl.Result, error) {
 
 	var err error
 
@@ -35,7 +35,7 @@ func UpgradeSpecialResource(r *SpecialResourceReconciler, req ctrl.Request) (ctr
 
 	log.Info("TODO: preflight checks")
 
-	return ReportSpecialResourcesStatus(r, req)
+	return ctrl.Result{Requeue: false}, nil
 }
 
 func cacheNodes(r *SpecialResourceReconciler, force bool) (*unstructured.UnstructuredList, error) {
