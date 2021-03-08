@@ -343,7 +343,7 @@ func createFromYAML(yamlFile []byte, r *SpecialResourceReconciler, namespace str
 			exit.OnError(errs.Wrap(err, "Cannot set kernel affine attributes"))
 
 			// We are only building a driver-container if we cannot pull the image
-			// We are asuming that vendors provide pre compiled DriverContainers
+			// We are assuming that vendors provide pre-compiled DriverContainers
 			// If err == nil, build a new container, if err != nil skip it
 			if err := rebuildDriverContainer(obj, r); err != nil {
 				log.Info("Skipping building driver-container", "Name", obj.GetName())
