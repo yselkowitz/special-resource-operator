@@ -338,7 +338,7 @@ func createFromYAML(yamlFile []byte, r *SpecialResourceReconciler, namespace str
 				obj.SetNamespace(namespace)
 			}
 
-			// kenrel affinity related attributes
+			// kernel affinity related attributes
 			err = setKernelAffineAttributes(obj, kernelAffinity)
 			exit.OnError(errs.Wrap(err, "Cannot set kernel affine attributes"))
 
