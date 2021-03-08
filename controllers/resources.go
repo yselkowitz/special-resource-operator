@@ -365,7 +365,7 @@ func createFromYAML(yamlFile []byte, r *SpecialResourceReconciler, namespace str
 			err = CRUD(obj, r)
 			exit.OnError(errs.Wrap(err, "CRUD exited non-zero"))
 
-			// Callbacks after CRUD will wait for ressource and check status
+			// Callbacks after CRUD will wait for resource and check status
 			// Only return if we have created all replicas otherwise
 			// we will reconcile only the first replica
 			if err := afterCRUDhooks(obj, r); err != nil && len(replicas) == len(runInfo.ClusterUpgradeInfo) {
