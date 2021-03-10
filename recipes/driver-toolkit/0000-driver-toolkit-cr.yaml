@@ -1,9 +1,9 @@
 apiVersion: sro.openshift.io/v1beta1
 kind: SpecialResource
 metadata:
-  name: driver-container-base
+  name: driver-toolkit
 spec:
-  namespace: driver-container-base
+  namespace: driver-toolkit
   driverContainer:
     source:
       git:
