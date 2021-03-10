@@ -7,7 +7,7 @@ CSPLIT           ?= csplit - --prefix="" --suppress-matched --suffix-format="%04
 YAMLFILES        ?= $(shell  find manifests config/recipes -name "*.yaml"  -not \( -path "config/recipes/lustre-client/*" -prune \) )
 
 export PATH := go/bin:$(PATH)
-include config/recipes/Makefile
+include recipes/Makefile
 
 kube-lint: kube-linter
 	$(KUBELINTER) lint $(YAMLFILES)
