@@ -413,6 +413,8 @@ func updateResourceVersion(req *unstructured.Unstructured, found *unstructured.U
 		}
 
 	}
+
+	// The clusterIP is immutable we need to carry it over
 	if kind == "Service" {
 		clusterIP, fnd, err := unstructured.NestedString(found.Object, "spec", "clusterIP")
 		exit.OnErrorOrNotFound(fnd, err)

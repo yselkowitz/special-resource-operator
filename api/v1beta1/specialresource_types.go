@@ -96,6 +96,8 @@ type SpecialResourceDriverContainer struct {
 	RunArgs []SpecialResourceRunArgs `json:"runArgs,omitempty"`
 	// +kubebuilder:validation:Optional
 	Artifacts SpecialResourceArtifacts `json:"artifacts,omitempty"`
+	// +kubebuilder:validation:Optional
+	Node SpecialResourceNode `json:"node,omitempty"`
 }
 
 // SpecialResourceDependency is a SpecialResource that needs to be Complete
@@ -128,7 +130,8 @@ type SpecialResourceStatus struct {
 // +kubebuilder:subresource:status
 
 // SpecialResource is the Schema for the specialresources API
-// +kubebuilder:resource:path=specialresources,scope=Cluster
+// +kubebuilder:resource
+// +kubebuilder:resource:path=specialresources,scope=Cluster,shortName=sr
 type SpecialResource struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
