@@ -77,16 +77,9 @@ configure:
 	cd config/default && $(KUSTOMIZE) edit set namespace $(NAMESPACE)
 	cd config/manager && $(KUSTOMIZE) edit set image controller=$(IMAGE)
 
-manifests: manifests-gen kustomize configure
-	cd $@; $(KUSTOMIZE) build ../config/namespace | $(CSPLIT)
-	cd $@; bash ../scripts/rename.sh
-	cd $@; $(KUSTOMIZE) build ../config/cr > 0015_specialresource_special-resource-preamble.yaml
-
 # Deploy controller in the configured Kubernetes cluster in ~/.kube/config
-deploy: manifests
+deploy: manifests-gen kustomize configure
 	$(KUSTOMIZE) build config/namespace | kubectl apply -f -
-	$(shell sleep 5)
-	$(KUSTOMIZE) build config/cr | kubectl apply -f -
 
 # If the CRD is deleted before the CRs the CRD finalizer will hang forever
 # The specialresource finalizer will not execute either

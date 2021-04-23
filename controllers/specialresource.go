@@ -93,11 +93,6 @@ func SpecialResourcesReconcile(r *SpecialResourceReconciler, req ctrl.Request) (
 		log = r.Log.WithName(color.Print(r.parent.Name, color.Green))
 		log.Info("Resolving Dependencies")
 
-		if r.parent.Name == "special-resource-preamble" {
-			log.Info("Preamble done, waiting for driver-container requests")
-			continue
-		}
-
 		// Execute finalization logic if CR is being deleted
 		isMarkedToBeDeleted := r.parent.GetDeletionTimestamp() != nil
 		if isMarkedToBeDeleted {
