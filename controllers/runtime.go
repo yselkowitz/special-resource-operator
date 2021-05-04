@@ -21,22 +21,22 @@ import (
 	//machineV1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 )
 
-type nodes struct {
-	list  *unstructured.UnstructuredList
-	count int64
+type NodesCache struct {
+	List  *unstructured.UnstructuredList
+	Count int64
 }
-type resourceGroupName struct {
+type ResourceGroupName struct {
 	DriverBuild            string
 	DriverContainer        string
 	RuntimeEnablement      string
 	DevicePlugin           string
 	DeviceMonitoring       string
-	DeviceGrafana          string
+	DeviceDashboard        string
 	DeviceFeatureDiscovery string
 	CSIDriver              string
 }
 
-type resourceStateName struct {
+type ResourceStateName struct {
 	DriverContainer   string
 	RuntimeEnablement string
 	DevicePlugin      string
@@ -49,33 +49,42 @@ type resourceStateName struct {
 	*/
 }
 
-type proxyConfiguration struct {
+type ProxyConfiguration struct {
 	HttpProxy  string
 	HttpsProxy string
 	NoProxy    string
 	TrustedCA  string
 }
 
-type runtimeInformation struct {
-	OperatingSystemMajor      string
-	OperatingSystemMajorMinor string
-	OperatingSystemDecimal    string
-	KernelFullVersion         string
-	KernelPatchVersion        string
-	ClusterVersion            string
-	ClusterVersionMajorMinor  string
-	ClusterUpgradeInfo        map[string]nodeUpgradeVersion
-	UpdateVendor              string
-	PushSecretName            string
-	OSImageURL                string
-	Node                      nodes
-	Proxy                     proxyConfiguration
-	GroupName                 resourceGroupName
-	StateName                 resourceStateName
-	SpecialResource           srov1beta1.SpecialResource
+type RuntimeInformation struct {
+	OperatingSystemMajor      string                        `json:"operatingSystemMajor"`
+	OperatingSystemMajorMinor string                        `json:"operatingSystemMajorMinor"`
+	OperatingSystemDecimal    string                        `json:"operatingSystemDecimal"`
+	KernelFullVersion         string                        `json:"kernelFullVersion"`
+	KernelPatchVersion        string                        `json:"kernelPatchVersion"`
+	ClusterVersion            string                        `json:"clusterVersion"`
+	ClusterVersionMajorMinor  string                        `json:"clusterVersionMajorMinor"`
+	ClusterUpgradeInfo        map[string]NodeUpgradeVersion `json:"clusterUpgradeInfo"`
+	UpdateVendor              string                        `json:"updateVendor"`
+	PushSecretName            string                        `json:"pushSecretName"`
+	OSImageURL                string                        `json:"osImageURL"`
+	Proxy                     ProxyConfiguration            `json:"proxy"`
+	GroupName                 ResourceGroupName             `json:"groupName"`
+	StateName                 ResourceStateName             `json:"stateName"`
+	SpecialResource           srov1beta1.SpecialResource    `json:"specialresource"`
 }
 
-var runInfo = runtimeInformation{
+var Node NodesCache
+
+func init() {
+	Node.Count = 0xDEADBEEF
+	Node.List = &unstructured.UnstructuredList{
+		Object: map[string]interface{}{},
+		Items:  []unstructured.Unstructured{},
+	}
+}
+
+var runInfo = RuntimeInformation{
 	OperatingSystemMajor:      "",
 	OperatingSystemMajorMinor: "",
 	OperatingSystemDecimal:    "",
@@ -83,22 +92,21 @@ var runInfo = runtimeInformation{
 	KernelPatchVersion:        "",
 	ClusterVersion:            "",
 	ClusterVersionMajorMinor:  "",
-	ClusterUpgradeInfo:        make(map[string]nodeUpgradeVersion),
+	ClusterUpgradeInfo:        make(map[string]NodeUpgradeVersion),
 	UpdateVendor:              "",
 	PushSecretName:            "",
 	OSImageURL:                "",
-	Node:                      nodes{list: &unstructured.UnstructuredList{}, count: 0xDEADBEEF},
-	Proxy:                     proxyConfiguration{},
-	GroupName: resourceGroupName{
+	Proxy:                     ProxyConfiguration{},
+	GroupName: ResourceGroupName{
 		DriverBuild:            "driver-build",
 		DriverContainer:        "driver-container",
 		RuntimeEnablement:      "runtime-enablement",
 		DevicePlugin:           "device-plugin",
 		DeviceMonitoring:       "device-monitoring",
-		DeviceGrafana:          "device-grafana",
+		DeviceDashboard:        "device-dashboard",
 		DeviceFeatureDiscovery: "device-feature-discovery",
 		CSIDriver:              "csi-driver"},
-	StateName: resourceStateName{
+	StateName: ResourceStateName{
 		DriverContainer:   "specialresource.openshift.io/driver-container",
 		RuntimeEnablement: "specialresource.openshift.io/runtime-enablement",
 		DevicePlugin:      "specialresource.openshift.io/device-plugin",
@@ -125,7 +133,7 @@ func getRuntimeInformation(r *SpecialResourceReconciler) {
 
 	var err error
 	log.Info("Get Node List")
-	runInfo.Node.list, err = cacheNodes(r, false)
+	Node.List, err = cacheNodes(r, false)
 	exit.OnError(errs.Wrap(err, "Failed to cache nodes"))
 
 	log.Info("Get Operating System")
@@ -172,7 +180,7 @@ func getOperatingSystem() (string, string, string, error) {
 	// Assuming all nodes are running the same os
 	os := "feature.node.kubernetes.io/system-os_release"
 
-	for _, node := range runInfo.Node.list.Items {
+	for _, node := range Node.List.Items {
 		labels := node.GetLabels()
 		nodeOSrel = labels[os+".ID"]
 		nodeOSmaj = labels[os+".VERSION_ID.major"]
@@ -192,7 +200,7 @@ func getKernelFullVersion() (string, error) {
 	var kernelFullVersion string
 	// Assuming all nodes are running the same kernel version,
 	// one could easily add driver-kernel-versions for each node.
-	for _, node := range runInfo.Node.list.Items {
+	for _, node := range Node.List.Items {
 		labels := node.GetLabels()
 
 		// We only need to check for the key, the value
@@ -316,9 +324,9 @@ func getOSImageURL(r *SpecialResourceReconciler) (string, error) {
 
 }
 
-func getProxyConfiguration(r *SpecialResourceReconciler) (proxyConfiguration, error) {
+func getProxyConfiguration(r *SpecialResourceReconciler) (ProxyConfiguration, error) {
 
-	proxy := proxyConfiguration{}
+	proxy := ProxyConfiguration{}
 
 	cfgs := &unstructured.UnstructuredList{}
 	cfgs.SetAPIVersion("config.openshift.io/v1")

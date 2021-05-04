@@ -7,7 +7,16 @@ CSPLIT           ?= csplit - --prefix="" --suppress-matched --suffix-format="%04
 YAMLFILES        ?= $(shell  find manifests config/recipes -name "*.yaml"  -not \( -path "config/recipes/lustre-client/*" -prune \) )
 
 export PATH := go/bin:$(PATH)
-include config/recipes/Makefile
+include Makefile.specialresource.mk
+
+
+patch:
+	git diff vendor/github.com/go-logr/zapr/zapr.go > /tmp/zapr.patch
+	git apply /tmp/zapr.patch
+
+
+helm-lint:
+	helm lint -f charts/global/values.yaml charts/example/*
 
 kube-lint: kube-linter
 	$(KUBELINTER) lint $(YAMLFILES)
@@ -67,7 +76,7 @@ manager: generate fmt vet
 	go build -mod=vendor -o /tmp/bin/manager main.go
 
 # Run against the configured Kubernetes cluster in ~/.kube/config
-run: generate fmt vet manifests-gen
+run: generate fmt vet manifests
 	go run -mod=vendor ./main.go
 
 configure:
@@ -77,8 +86,9 @@ configure:
 	cd config/default && $(KUSTOMIZE) edit set namespace $(NAMESPACE)
 	cd config/manager && $(KUSTOMIZE) edit set image controller=$(IMAGE)
 
+
 # Deploy controller in the configured Kubernetes cluster in ~/.kube/config
-deploy: manifests-gen kustomize configure
+deploy: manifests kustomize configure
 	$(KUSTOMIZE) build config/namespace | kubectl apply -f -
 
 # If the CRD is deleted before the CRs the CRD finalizer will hang forever
@@ -91,7 +101,7 @@ undeploy: kustomize
 
 
 # Generate manifests e.g. CRD, RBAC etc.
-manifests-gen: controller-gen
+manifests: controller-gen
 	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=manager-role webhook paths="./..." output:crd:artifacts:config=config/crd/bases
 
 # Run go fmt against code
@@ -107,7 +117,7 @@ generate: controller-gen
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
 # Build the docker image
-local-image-build: test manifests
+local-image-build: helm-lint test generate manifests
 	podman build -f Dockerfile.ubi8 --no-cache . -t $(IMAGE)
 
 # Push the docker image
@@ -123,7 +133,7 @@ ifeq (, $(shell which controller-gen))
 	CONTROLLER_GEN_TMP_DIR=$$(mktemp -d) ;\
 	cd $$CONTROLLER_GEN_TMP_DIR ;\
 	go mod init tmp ;\
-	go get sigs.k8s.io/controller-tools/cmd/controller-gen@v0.3.0 ;\
+	go get sigs.k8s.io/controller-tools/cmd/controller-gen@v0.5.0 ;\
 	rm -rf $$CONTROLLER_GEN_TMP_DIR ;\
 	}
 CONTROLLER_GEN=$(GOBIN)/controller-gen
@@ -180,7 +190,7 @@ endif
 
 # Generate bundle manifests and metadata, then validate generated files.
 .PHONY: bundle
-bundle: manifests-gen
+bundle: manifests
 	operator-sdk generate kustomize manifests -q
 	cd config/manager && $(KUSTOMIZE) edit set image controller=$(IMAGE)
 	$(KUSTOMIZE) build config/manifests | operator-sdk generate bundle -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS)

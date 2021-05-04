@@ -41,7 +41,7 @@ func finalizeSpecialResource(r *SpecialResourceReconciler) error {
 	var manifests map[string]interface{}
 	var found bool
 
-	config, err = getHardwareConfiguration(r)
+	config, err = getChartTemplates(r)
 	if err != nil {
 		log.Info("Failed to get hardware states while reconciling finalizer")
 		return err

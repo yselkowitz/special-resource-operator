@@ -25,6 +25,7 @@ import (
 	configv1 "github.com/openshift/api/config/v1"
 	clientconfigv1 "github.com/openshift/client-go/config/clientset/versioned/typed/config/v1"
 	errs "github.com/pkg/errors"
+	"helm.sh/helm/v3/pkg/chart"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -50,7 +51,8 @@ type SpecialResourceReconciler struct {
 
 	specialresource srov1beta1.SpecialResource
 	parent          srov1beta1.SpecialResource
-	dependency      srov1beta1.SpecialResourceDependency
+	chart           chart.Chart
+	dependency      chart.Dependency
 	clusterOperator configv1.ClusterOperator
 }
 
@@ -74,15 +76,15 @@ func (r *SpecialResourceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, er
 	if res, err = SpecialResourcesStatus(r, req, conds); err != nil {
 		return res, errs.Wrap(err, "Cannot update special resource status")
 	}
-	//Reconcile all specialresources
+	// Reconcile all specialresources
 	if res, err = SpecialResourcesReconcile(r, req); err == nil && !res.Requeue {
 		conds = conditions.AvailableNotProgressingNotDegraded()
 	} else {
-		return res, err
+		return res, errs.Wrap(err, "Cannot reconcile special resource")
 	}
 
 	// Only if we're successfull we're going to update the status to
-	// Available otherwise retunr the recondile error
+	// Available otherwise return the reconcile error
 	if res, err = SpecialResourcesStatus(r, req, conds); err != nil {
 		log.Info("Cannot update special resource status", "error", fmt.Sprintf("%v", err))
 		return res, nil

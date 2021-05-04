@@ -30,4 +30,3 @@ func RenderOperatingSystem(rel string, maj string, min string) (string, string, 
 	}
 	return rel + maj, rel + maj + "." + min, maj + "." + min, nil
 }
-

@@ -1,29 +1,34 @@
 package controllers
 
 import (
-	"bytes"
 	"context"
-	"html/template"
+	"fmt"
 	"sort"
 	"strings"
 
 	"github.com/go-logr/logr"
 	"github.com/openshift-psap/special-resource-operator/pkg/assets"
 	"github.com/openshift-psap/special-resource-operator/pkg/exit"
-	"github.com/openshift-psap/special-resource-operator/pkg/hash"
+	"github.com/openshift-psap/special-resource-operator/pkg/helmer"
+	"github.com/openshift-psap/special-resource-operator/pkg/kernel"
 	"github.com/openshift-psap/special-resource-operator/pkg/metrics"
+	"github.com/openshift-psap/special-resource-operator/pkg/resource"
+	"github.com/openshift-psap/special-resource-operator/pkg/slice"
 	"github.com/openshift-psap/special-resource-operator/pkg/yamlutil"
 	errs "github.com/pkg/errors"
+	"helm.sh/helm/v3/pkg/chart"
+	"helm.sh/helm/v3/pkg/chartutil"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/yaml"
 )
 
-func getHardwareConfiguration(r *SpecialResourceReconciler) (*unstructured.Unstructured, error) {
+func getChartTemplates(r *SpecialResourceReconciler) (*unstructured.Unstructured, error) {
 
-	log.Info("Looking for Hardware Configuration ConfigMap for")
+	log.Info("Looking for chart templates ConfigMap for")
 	cm := &unstructured.Unstructured{}
 	cm.SetAPIVersion("v1")
 	cm.SetKind("ConfigMap")
@@ -32,46 +37,19 @@ func getHardwareConfiguration(r *SpecialResourceReconciler) (*unstructured.Unstr
 	err := r.Get(context.TODO(), namespacedName, cm)
 
 	if apierrors.IsNotFound(err) {
-		log.Info("Hardware Configuration ConfigMap not found, creating from local repository (/opt/sro/recipes) for")
-		manifests := "/opt/sro/recipes/" + r.specialresource.Name + "/manifests"
-		return getLocalHardwareConfiguration(manifests, r.specialresource.Name)
+		log.Info("SpecialResource chart templates ConfigMap not found, using local repository \"/charts\" for")
+		return nil, nil
 	}
-
-	return cm, nil
-}
-
-func getLocalHardwareConfiguration(path string, specialresource string) (*unstructured.Unstructured, error) {
-
-	cm := &unstructured.Unstructured{}
-	cm.SetAPIVersion("v1")
-	cm.SetKind("ConfigMap")
-	cm.SetName(specialresource)
-
-	manifests := assets.GetFrom(path)
-
-	data := map[string]string{}
-
-	for _, manifest := range manifests {
-		data[string(manifest.Name)] = string(manifest.Content)
-	}
-
-	if err := unstructured.SetNestedStringMap(cm.Object, data, "data"); err != nil {
-		return cm, errs.Wrap(err, "Couldn't update ConfigMap data field")
-	}
-
 	return cm, nil
 }
 
 func createImagePullerRoleBinding(r *SpecialResourceReconciler) error {
 
-	log.Info("dep", "ImageReference", r.dependency.ImageReference)
-	log.Info("dep", "Name", r.dependency.Name)
-
-	if r.dependency.ImageReference != "true" {
-		return nil
+	if found := slice.Contains(r.dependency.Tags, "image-puller"); !found {
+		log.Info("dep", "ImagePuller", found)
 	}
 
-	log.Info("Looking for ImageReference RoleBinding")
+	log.Info("Looking for ImagePuller RoleBinding")
 	rb := &unstructured.Unstructured{}
 	rb.SetAPIVersion("rbac.authorization.k8s.io/v1")
 	rb.SetKind("RoleBinding")
@@ -88,7 +66,7 @@ func createImagePullerRoleBinding(r *SpecialResourceReconciler) error {
 
 	if apierrors.IsNotFound(err) {
 
-		log.Info("ImageReference RoleBinding not found, creating")
+		log.Info("ImagePuller RoleBinding not found, creating")
 		rb.SetName("system:image-puller")
 		rb.SetNamespace(r.specialresource.Spec.Namespace)
 		err := unstructured.SetNestedField(rb.Object, "rbac.authorization.k8s.io", "roleRef", "apiGroup")
@@ -153,32 +131,108 @@ func createImagePullerRoleBinding(r *SpecialResourceReconciler) error {
 	return nil
 }
 
-// ReconcileHardwareStates Reconcile Hardware States
-func ReconcileHardwareStates(r *SpecialResourceReconciler, config unstructured.Unstructured) error {
+// ReconcileChartStates Reconcile Hardware States
+func ReconcileChartStates(r *SpecialResourceReconciler, templates *unstructured.Unstructured) error {
 
-	var manifests map[string]interface{}
-	var err error
-	var found bool
+	nostate := r.chart
+	nostate.Templates = []*chart.File{}
 
-	manifests, found, err = unstructured.NestedMap(config.Object, "data")
-	exit.OnErrorOrNotFound(found, err)
+	states := []*chart.File{}
 
-	states := make([]string, 0, len(manifests))
-	for key := range manifests {
-		states = append(states, key)
+	// First get all non-state related files from the templates
+	// and save the states in a temporary slice for single execution
+	for _, template := range r.chart.Templates {
+		if assets.ValidStateName(template.Name) {
+			states = append(states, template)
+		} else {
+			nostate.Templates = append(nostate.Templates, template)
+		}
 	}
 
-	sort.Strings(states)
+	// If we have found a ConfigMap with the templates use this to populate
+	// the states otherwise use the templates from the chart directory
+	if templates != nil {
+		log.Info("Getting states from ConfigMap")
+		states = assets.FromConfigMap(templates)
+	}
+
+	sort.Slice(states, func(i, j int) bool {
+		return states[i].Name < states[j].Name
+	})
 
 	for _, state := range states {
 
-		log.Info("Executing", "State", state)
-		namespacedYAML := []byte(manifests[state].(string))
-		if err := createFromYAML(namespacedYAML, r, r.specialresource.Spec.Namespace); err != nil {
-			metrics.SetCompletedState(r.specialresource.Name, state, 0)
-			return errs.Wrap(err, "Failed to create resources")
+		log.Info("Executing", "State", state.Name)
+
+		step := nostate
+		step.Templates = append(nostate.Templates, state)
+
+		// We are kernel-affine if the yamlSpec uses {{.KernelFullVersion}}
+		// then we need to replicate the object and set a name + os + kernel version
+		kernelAffine := strings.Contains(string(state.Data), "{{.Values.KernelFullVersion}}")
+
+		var replicas int
+		var version NodeUpgradeVersion
+
+		// The cluster has more then one kernel version running
+		// we're replicating the driver-container DaemonSet to
+		// the number of kernel versions running in the cluster
+		if len(runInfo.ClusterUpgradeInfo) == 0 {
+			exit.OnError(errs.New("No KernelVersion detected, something is wrong"))
 		}
-		metrics.SetCompletedState(r.specialresource.Name, state, 1)
+
+		//var replicas is to keep track of the number of replicas
+		// and either to break or continue the for looop
+		for runInfo.KernelFullVersion, version = range runInfo.ClusterUpgradeInfo {
+
+			runInfo.ClusterVersionMajorMinor = version.ClusterVersion
+			runInfo.OperatingSystemDecimal = version.OSVersion
+
+			if kernelAffine {
+				log.Info("ClusterUpgradeInfo",
+					"kernel", runInfo.KernelFullVersion,
+					"rhel", runInfo.OperatingSystemDecimal,
+					"cluster", runInfo.ClusterVersionMajorMinor)
+			}
+
+			var err error
+			r.chart.Values, err = chartutil.CoalesceValues(&r.chart, r.specialresource.Spec.Set.Object)
+			exit.OnError(err)
+
+			rinfo, err := runtime.DefaultUnstructuredConverter.ToUnstructured(&runInfo)
+			exit.OnError(err)
+
+			r.chart.Values, err = chartutil.CoalesceValues(&r.chart, rinfo)
+			exit.OnError(err)
+
+			d, _ := yaml.Marshal(r.chart.Values)
+
+			fmt.Printf("%s\n", d)
+
+			yaml, err := helmer.TemplateChart(r.chart, r.chart.Values)
+			exit.OnError(err)
+
+			err = createFromYAML(yaml, r, r.specialresource.Spec.Namespace,
+				runInfo.KernelFullVersion,
+				runInfo.OperatingSystemDecimal)
+
+			replicas += 1
+
+			// If the first replica fails we want to create all remaining
+			// ones for parallel startup, otherwise we would wait for the first
+			// then for the second etc.
+			if err != nil && replicas == len(runInfo.ClusterUpgradeInfo) {
+				metrics.SetCompletedState(r.specialresource.Name, state.Name, 0)
+				return errs.Wrap(err, "Failed to create state: "+state.Name)
+			}
+
+			// We're always doing one run to create a non kernel affine resource
+			if !kernelAffine {
+				break
+			}
+
+		}
+		metrics.SetCompletedState(r.specialresource.Name, state.Name, 1)
 	}
 
 	return nil
@@ -202,17 +256,17 @@ metadata:
 		add := []byte(r.specialresource.Spec.Namespace)
 		ns = append(ns, add...)
 	}
-	if err := createFromYAML(ns, r, ""); err != nil {
+	if err := createFromYAML(ns, r, "", "", ""); err != nil {
 		log.Info("Cannot reconcile specialresource namespace, something went horribly wrong")
 		exit.OnError(err)
 	}
 }
 
-// ReconcileHardwareConfigurations Reconcile Hardware Configurations
-func ReconcileHardwareConfigurations(r *SpecialResourceReconciler) error {
+// ReconcileChart Reconcile Hardware Configurations
+func ReconcileChart(r *SpecialResourceReconciler) error {
 
 	var err error
-	var config *unstructured.Unstructured
+	templates := &unstructured.Unstructured{}
 	// Leave this here, this is crucial for all following work
 	// Creating and setting the working namespace for the specialresource
 	// specialresource name == namespace if not metadata.namespace is set
@@ -224,69 +278,30 @@ func ReconcileHardwareConfigurations(r *SpecialResourceReconciler) error {
 
 	// Check if we have a ConfigMap deployed in the specialresrouce
 	// namespace if not fallback to the local repository.
-	// ConfigMap can be used to overrride the local repository manifests
+	// ConfigMap can be used to overrride the local repository templates
 	// for testing.
-	log.Info("Getting Configuration")
-	if config, err = getHardwareConfiguration(r); err != nil {
-		return errs.Wrap(err, "Error reconciling Hardware Configuration States")
+	log.Info("Getting chart templates from ConfigMap")
+	if templates, err = getChartTemplates(r); err != nil {
+		return errs.Wrap(err, "Cannot get ConfigMap with chart templates")
 	}
 
-	log.Info("Found Hardware Configuration States", "Name", config.GetName())
-
-	runInfo.Node.list, err = cacheNodes(r, false)
+	Node.List, err = cacheNodes(r, false)
 	exit.OnError(errs.Wrap(err, "Failed to cache Nodes"))
 
 	getRuntimeInformation(r)
 	logRuntimeInformation()
 
-	if err := ReconcileHardwareStates(r, *config); err != nil {
+	if err := ReconcileChartStates(r, templates); err != nil {
 		return errs.Wrap(err, "Cannot reconcile hardware states")
 	}
 
 	return nil
 }
 
-func templateRuntimeInformation(yamlSpec *[]byte, r runtimeInformation) error {
-
-	spec := string(*yamlSpec)
-
-	t := template.Must(template.New("runtime").Parse(spec))
-	var buff bytes.Buffer
-	if err := t.Execute(&buff, runInfo); err != nil {
-		return errs.Wrap(err, "Cannot templatize spec for resource info injection, check manifest")
-	}
-	*yamlSpec = buff.Bytes()
-
-	return nil
-}
-
-func setKernelAffineAttributes(obj *unstructured.Unstructured, kernelAffinity bool) error {
-
-	if kernelAffinity {
-		kernelVersion := strings.ReplaceAll(runInfo.KernelFullVersion, "_", "-")
-		hash64 := hash.FNV64a(runInfo.OperatingSystemMajorMinor + "-" + kernelVersion)
-		name := obj.GetName() + "-" + hash64
-		obj.SetName(name)
-
-		if obj.GetKind() == "DaemonSet" {
-			err := unstructured.SetNestedField(obj.Object, name, "metadata", "labels", "app")
-			exit.OnError(err)
-			err = unstructured.SetNestedField(obj.Object, name, "spec", "selector", "matchLabels", "app")
-			exit.OnError(err)
-			err = unstructured.SetNestedField(obj.Object, name, "spec", "template", "metadata", "labels", "app")
-			exit.OnError(err)
-			err = unstructured.SetNestedField(obj.Object, name, "spec", "template", "metadata", "labels", "app")
-			exit.OnError(err)
-		}
-
-		if err := setKernelVersionNodeAffinity(obj); err != nil {
-			return errs.Wrap(err, "Cannot set kernel version node affinity for obj: "+obj.GetKind())
-		}
-	}
-	return nil
-}
-
-func createFromYAML(yamlFile []byte, r *SpecialResourceReconciler, namespace string) error {
+func createFromYAML(yamlFile []byte, r *SpecialResourceReconciler,
+	namespace string,
+	kernelFullVersion string,
+	operatingSystemMajorMinor string) error {
 
 	scanner := yamlutil.NewYAMLScanner(yamlFile)
 
@@ -294,88 +309,48 @@ func createFromYAML(yamlFile []byte, r *SpecialResourceReconciler, namespace str
 
 		yamlSpec := scanner.Bytes()
 
-		// We are kernel-affine if the yamlSpec uses {{.KernelFullVersion}}
-		// then we need to replicate the object and set a name + os + kernel version
-		kernelAffinity := strings.Contains(string(yamlSpec), "{{.KernelFullVersion}}")
-
-		var version nodeUpgradeVersion
-		var replicas [][]byte // This is to keep track of the number of replicas
-		// and either to break or continue the for looop
-		for runInfo.KernelFullVersion, version = range runInfo.ClusterUpgradeInfo {
-
-			runInfo.ClusterVersionMajorMinor = version.clusterVersion
-			runInfo.OperatingSystemDecimal = version.rhelVersion
-
-			if kernelAffinity {
-				log.Info("ClusterUpgradeInfo",
-					"kernel", runInfo.KernelFullVersion,
-					"rhel", runInfo.OperatingSystemDecimal,
-					"cluster", runInfo.ClusterVersionMajorMinor)
-			}
-
-			replicas = append(replicas, yamlSpec)
-
-			// We can pass template information from the CR to the yamls
-			// thats why we are running 2 passes.
-			if err := templateRuntimeInformation(&replicas[len(replicas)-1], runInfo); err != nil {
-				return errs.Wrap(err, "Cannot inject runtime information 1st pass")
-			}
-
-			if err := templateRuntimeInformation(&replicas[len(replicas)-1], runInfo); err != nil {
-				return errs.Wrap(err, "Cannot inject runtime information 2nd pass")
-			}
-
-			obj := &unstructured.Unstructured{}
-			jsonSpec, err := yaml.YAMLToJSON(replicas[len(replicas)-1])
-			if err != nil {
-				return errs.Wrap(err, "Could not convert yaml file to json"+string(yamlSpec))
-			}
-
-			err = obj.UnmarshalJSON(jsonSpec)
-			exit.OnError(errs.Wrap(err, "Cannot unmarshall json spec, check your manifests"))
-
-			if resourceIsNamespaced(obj.GetKind()) {
-				obj.SetNamespace(namespace)
-			}
-
-			// kernel affinity related attributes
-			err = setKernelAffineAttributes(obj, kernelAffinity)
-			exit.OnError(errs.Wrap(err, "Cannot set kernel affine attributes"))
-
-			// We are only building a driver-container if we cannot pull the image
-			// We are assuming that vendors provide pre-compiled DriverContainers
-			// If err == nil, build a new container, if err != nil skip it
-			if err := rebuildDriverContainer(obj, r); err != nil {
-				log.Info("Skipping building driver-container", "Name", obj.GetName())
-				return nil
-			}
-
-			// The cluster has more then one kernel version running
-			// we're replicating the driver-container DaemonSet to
-			// the number of kernel versions running in the cluster
-			if len(runInfo.ClusterUpgradeInfo) == 0 {
-				exit.OnError(errs.New("No KernelVersion detected, something is wrong"))
-			}
-
-			// Callbacks before CRUD will update the manifests
-			if err := beforeCRUDhooks(obj, r); err != nil {
-				return errs.Wrap(err, "Before CRUD hooks failed")
-			}
-			// Create Update Delete Patch resources
-			err = CRUD(obj, r)
-			exit.OnError(errs.Wrap(err, "CRUD exited non-zero"))
-
-			// Callbacks after CRUD will wait for resource and check status
-			// Only return if we have created all replicas otherwise
-			// we will reconcile only the first replica
-			if err := afterCRUDhooks(obj, r); err != nil && len(replicas) == len(runInfo.ClusterUpgradeInfo) {
-				return errs.Wrap(err, "After CRUD hooks failed")
-			}
-
-			if !kernelAffinity {
-				break
-			}
+		obj := &unstructured.Unstructured{}
+		jsonSpec, err := yaml.YAMLToJSON(yamlSpec)
+		if err != nil {
+			return errs.Wrap(err, "Could not convert yaml file to json"+string(yamlSpec))
 		}
+
+		err = obj.UnmarshalJSON(jsonSpec)
+		exit.OnError(errs.Wrap(err, "Cannot unmarshall json spec, check your manifests"))
+
+		if resource.IsNamespaced(obj.GetKind()) {
+			obj.SetNamespace(namespace)
+		}
+
+		// kernel affinity related attributes only set if there is an
+		// annotation specialresource.openshift.io/kernel-affine: true
+		if kernel.IsObjectAffine(obj) {
+			err = kernel.SetAffineAttributes(obj, kernelFullVersion,
+				operatingSystemMajorMinor)
+			exit.OnError(errs.Wrap(err, "Cannot set kernel affine attributes"))
+		}
+
+		// We are only building a driver-container if we cannot pull the image
+		// We are asuming that vendors provide pre compiled DriverContainers
+		// If err == nil, build a new container, if err != nil skip it
+		if err := rebuildDriverContainer(obj, r); err != nil {
+			log.Info("Skipping building driver-container", "Name", obj.GetName())
+			return nil
+		}
+
+		// Callbacks before CRUD will update the manifests
+		if err := beforeCRUDhooks(obj, r); err != nil {
+			return errs.Wrap(err, "Before CRUD hooks failed")
+		}
+		// Create Update Delete Patch resources
+		err = CRUD(obj, r)
+		exit.OnError(errs.Wrap(err, "CRUD exited non-zero"))
+
+		// Callbacks after CRUD will wait for ressource and check status
+		if err := afterCRUDhooks(obj, r); err != nil {
+			return errs.Wrap(err, "After CRUD hooks failed")
+		}
+
 	}
 
 	if err := scanner.Err(); err != nil {
@@ -384,65 +359,11 @@ func createFromYAML(yamlFile []byte, r *SpecialResourceReconciler, namespace str
 	return nil
 }
 
-// Some resources need an updated resourceversion, during updates
-func needToUpdateResourceVersion(kind string) bool {
-
-	if kind == "SecurityContextConstraints" ||
-		kind == "Service" ||
-		kind == "ServiceMonitor" ||
-		kind == "Route" ||
-		kind == "BuildConfig" ||
-		kind == "ImageStream" ||
-		kind == "PrometheusRule" ||
-		kind == "CSIDriver" ||
-		kind == "Issuer" ||
-		kind == "Certificate" {
-		return true
-	}
-	return false
-}
-
-func updateResourceVersion(req *unstructured.Unstructured, found *unstructured.Unstructured) error {
-
-	kind := found.GetKind()
-
-	if needToUpdateResourceVersion(kind) {
-		version, fnd, err := unstructured.NestedString(found.Object, "metadata", "resourceVersion")
-		exit.OnErrorOrNotFound(fnd, err)
-
-		if err := unstructured.SetNestedField(req.Object, version, "metadata", "resourceVersion"); err != nil {
-			return errs.Wrap(err, "Couldn't update ResourceVersion")
-		}
-
-	}
-	if kind == "Service" {
-		clusterIP, fnd, err := unstructured.NestedString(found.Object, "spec", "clusterIP")
-		exit.OnErrorOrNotFound(fnd, err)
-
-		if err := unstructured.SetNestedField(req.Object, clusterIP, "spec", "clusterIP"); err != nil {
-			return errs.Wrap(err, "Couldn't update clusterIP")
-		}
-		return nil
-	}
-	return nil
-}
-
-func resourceIsNamespaced(kind string) bool {
-	if kind == "Namespace" ||
-		kind == "ClusterRole" ||
-		kind == "ClusterRoleBinding" ||
-		kind == "SecurityContextConstraint" ||
-		kind == "SpecialResource" {
-		return false
-	}
-	return true
-}
-
 // CRUD Create Update Delete Resource
 func CRUD(obj *unstructured.Unstructured, r *SpecialResourceReconciler) error {
 
 	var logger logr.Logger
-	if resourceIsNamespaced(obj.GetKind()) {
+	if resource.IsNamespaced(obj.GetKind()) {
 		logger = log.WithValues("Kind", obj.GetKind()+": "+obj.GetNamespace()+"/"+obj.GetName())
 	} else {
 		logger = log.WithValues("Kind", obj.GetKind()+": "+obj.GetName())
@@ -477,10 +398,7 @@ func CRUD(obj *unstructured.Unstructured, r *SpecialResourceReconciler) error {
 	// Not updating Pod because we can only update image and some other
 	// specific minor fields.
 	//
-	// ServiceAccounts cannot be updated, maybe delete and create?
-	if obj.GetKind() == "ServiceAccount" || obj.GetKind() == "Pod" || obj.GetKind() == "BuildConfig" {
-		// Not updating BuildConfig since it triggers a new build in 4.6 was not doing that in <4.6
-		//logger.Info("TODO: Found, not updating, does not work, why? Secret accumulation?")
+	if resource.IsNotUpdateable(obj.GetKind()) {
 		return nil
 	}
 
@@ -490,7 +408,7 @@ func CRUD(obj *unstructured.Unstructured, r *SpecialResourceReconciler) error {
 	// required.ResourceVersion = found.ResourceVersion this is only needed
 	// before we update a resource, we do not care when creating, hence
 	// !leave this here!
-	if err := updateResourceVersion(required, found); err != nil {
+	if err := resource.UpdateResourceVersion(required, found); err != nil {
 		return errs.Wrap(err, "Couldn't Update ResourceVersion")
 	}
 
