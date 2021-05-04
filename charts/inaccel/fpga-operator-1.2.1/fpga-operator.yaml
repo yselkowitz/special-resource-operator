@@ -1,0 +1,27 @@
+apiVersion: sro.openshift.io/v1beta1
+kind: SpecialResource
+metadata:
+  name: inaccel-fgpa-operator
+spec:
+  chart:
+    name: fpga-operator
+    repository: file://charts/inaccel
+    version: 1.2.1
+  namespace: inaccel-fpga-operator
+  nodeSelector: ""
+  set:
+    kind: Values
+    apiVersion: sro.openshift.io/v1beta1
+    coral:
+      image: inaccel/coral
+      pullPolicy: Always
+      # resources: ...
+      # tag: ...
+    # license: ...
+    monitor:
+      image: inaccel/monitor
+      # port: ...
+      # pullPolicy: ...
+      # resources: ...
+      tag: latest
+    # nodeSelector: ...
