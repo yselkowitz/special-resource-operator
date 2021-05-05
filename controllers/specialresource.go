@@ -176,10 +176,21 @@ func ReconcileSpecialResourceChart(r *SpecialResourceReconciler, sr srov1beta1.S
 	return ReconcileChart(r)
 }
 
+func FindSR(a []srov1beta1.SpecialResource, x string, by string) int {
+	for i, n := range a {
+		if by == "Name" {
+			if x == n.GetName() {
+				return i
+			}
+		}
+	}
+	return -1
+}
+
 func getDependencyFrom(specialresources *srov1beta1.SpecialResourceList, name string) (srov1beta1.SpecialResource, error) {
 
 	log.Info("Looking for SpecialResource in fetched List (all namespaces)")
-	if idx := slice.FindSR(specialresources.Items, name, "Name"); idx != -1 {
+	if idx := FindSR(specialresources.Items, name, "Name"); idx != -1 {
 		return specialresources.Items[idx], nil
 	}
 

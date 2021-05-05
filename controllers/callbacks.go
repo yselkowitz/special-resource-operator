@@ -143,7 +143,7 @@ func checkForImagePullBackOff(obj *unstructured.Unstructured, r *SpecialResource
 			annotations := obj.GetAnnotations()
 			if vendor, ok := annotations["specialresource.openshift.io/driver-container-vendor"]; ok {
 				runInfo.UpdateVendor = vendor
-				return errs.New("ImagePullBackOff need to rebuild" + runInfo.UpdateVendor + "driver-container")
+				return errs.New("ImagePullBackOff need to rebuild " + runInfo.UpdateVendor + " driver-container")
 			}
 		}
 

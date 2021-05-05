@@ -91,6 +91,8 @@ type SpecialResourceSpec struct {
 	// +kubebuilder:validation:Required
 	Namespace string `json:"namespace"`
 	// +kubebuilder:validation:Optional
+	ForceUpgrade bool `json:"forceUpgrade"`
+	// +kubebuilder:validation:Optional
 	// +kubebuilder:pruning:PreserveUnknownFields
 	// +kubebuilder:validation:EmbeddedResource
 	Set unstructured.Unstructured `json:"set,omitempty"`

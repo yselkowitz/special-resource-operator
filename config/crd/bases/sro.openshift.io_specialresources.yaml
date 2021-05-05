@@ -129,6 +129,8 @@ spec:
                         type: object
                     type: object
                 type: object
+              forceUpgrade:
+                type: boolean
               namespace:
                 type: string
               nodeSelector:

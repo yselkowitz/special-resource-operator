@@ -9,10 +9,12 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/openshift-psap/special-resource-operator/pkg/color"
 	"github.com/openshift-psap/special-resource-operator/pkg/exit"
+	"github.com/openshift-psap/special-resource-operator/pkg/slice"
 	errs "github.com/pkg/errors"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/chart/loader"
+	"helm.sh/helm/v3/pkg/releaseutil"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
 
@@ -22,6 +24,8 @@ var (
 
 func init() {
 	log = zap.New(zap.UseDevMode(true)).WithName(color.Print("helm", color.Blue))
+	err := OpenShiftInstallOrder()
+	exit.OnError(err)
 }
 
 type HelmChart struct {
@@ -64,6 +68,16 @@ func Load(ch interface{}) (*chart.Chart, error) {
 
 	return loaded, err
 
+}
+
+func OpenShiftInstallOrder() error {
+	// ImageStream
+	// BuildConfig
+	idx := slice.Find(releaseutil.InstallOrder, "Service")
+	releaseutil.InstallOrder = slice.Insert(releaseutil.InstallOrder, idx, "BuildConfig")
+	releaseutil.InstallOrder = slice.Insert(releaseutil.InstallOrder, idx, "ImageStream")
+
+	return nil
 }
 
 func TemplateChart(ch chart.Chart, vals map[string]interface{}) ([]byte, error) {

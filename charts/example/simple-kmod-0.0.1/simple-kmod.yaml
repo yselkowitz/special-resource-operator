@@ -13,7 +13,8 @@ spec:
     apiVersion: sro.openshift.io/v1beta1
     kmodNames: ["simple-kmod", "simple-procfs-kmod"]
     buildArgs:
-      kmodver: sro
+    - name: "KMODVER"
+      value: "SRO"
   driverContainer:
     source:
       git:

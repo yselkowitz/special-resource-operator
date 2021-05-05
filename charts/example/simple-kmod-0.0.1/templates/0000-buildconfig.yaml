@@ -35,10 +35,12 @@ spec:
         name: "driver-container-base:v{{.Values.kernelFullVersion}}"
         namespace: "driver-container-base"
       buildArgs:
-        {{ range .Values.specialresource.spec.driverContainer.buildArgs }}
-        - name: {{.Values.Name}}
-          value: {{.Values.Value}}
-        {{end}}
+        {{- range $arg := .Values.buildArgs }}
+        - name: {{ $arg.name }}
+          value: {{ $arg.value }}
+        {{- end }}
+        - name: KVER
+          value: {{ .Values.kernelFullVersion }}
   output:
     to:
       kind: ImageStreamTag

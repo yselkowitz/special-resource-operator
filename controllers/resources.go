@@ -169,7 +169,7 @@ func ReconcileChartStates(r *SpecialResourceReconciler, templates *unstructured.
 
 		// We are kernel-affine if the yamlSpec uses {{.KernelFullVersion}}
 		// then we need to replicate the object and set a name + os + kernel version
-		kernelAffine := strings.Contains(string(state.Data), "{{.Values.KernelFullVersion}}")
+		kernelAffine := strings.Contains(string(state.Data), ".Values.kernelFullVersion")
 
 		var replicas int
 		var version NodeUpgradeVersion
@@ -191,26 +191,28 @@ func ReconcileChartStates(r *SpecialResourceReconciler, templates *unstructured.
 			if kernelAffine {
 				log.Info("ClusterUpgradeInfo",
 					"kernel", runInfo.KernelFullVersion,
-					"rhel", runInfo.OperatingSystemDecimal,
+					"os", runInfo.OperatingSystemDecimal,
 					"cluster", runInfo.ClusterVersionMajorMinor)
 			}
 
 			var err error
-			r.chart.Values, err = chartutil.CoalesceValues(&r.chart, r.specialresource.Spec.Set.Object)
+			step.Values, err = chartutil.CoalesceValues(&step, r.specialresource.Spec.Set.Object)
 			exit.OnError(err)
 
 			rinfo, err := runtime.DefaultUnstructuredConverter.ToUnstructured(&runInfo)
 			exit.OnError(err)
 
-			r.chart.Values, err = chartutil.CoalesceValues(&r.chart, rinfo)
+			step.Values, err = chartutil.CoalesceValues(&step, rinfo)
 			exit.OnError(err)
 
-			d, _ := yaml.Marshal(r.chart.Values)
+			d, _ := yaml.Marshal(step.Values)
 
 			fmt.Printf("%s\n", d)
 
-			yaml, err := helmer.TemplateChart(r.chart, r.chart.Values)
+			yaml, err := helmer.TemplateChart(step, step.Values)
 			exit.OnError(err)
+
+			fmt.Printf("--------------------------------------------------\n\n%s\n\n", yaml)
 
 			err = createFromYAML(yaml, r, r.specialresource.Spec.Namespace,
 				runInfo.KernelFullVersion,
@@ -399,6 +401,7 @@ func CRUD(obj *unstructured.Unstructured, r *SpecialResourceReconciler) error {
 	// specific minor fields.
 	//
 	if resource.IsNotUpdateable(obj.GetKind()) {
+		log.Info("Not Updateable", "Resource", obj.GetKind())
 		return nil
 	}
 

@@ -2,7 +2,6 @@ package slice
 
 import (
 	"github.com/go-logr/logr"
-	srov1beta1 "github.com/openshift-psap/special-resource-operator/api/v1beta1"
 	"github.com/openshift-psap/special-resource-operator/pkg/color"
 	"helm.sh/helm/v3/pkg/chart"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -37,17 +36,6 @@ func Contains(a []string, x string) bool {
 	return false
 }
 
-func FindSR(a []srov1beta1.SpecialResource, x string, by string) int {
-	for i, n := range a {
-		if by == "Name" {
-			if x == n.GetName() {
-				return i
-			}
-		}
-	}
-	return -1
-}
-
 func FindCRFile(a []*chart.File, x string) int {
 	for i, n := range a {
 		if n.Name == x+".yaml" {
@@ -55,4 +43,13 @@ func FindCRFile(a []*chart.File, x string) int {
 		}
 	}
 	return -1
+}
+
+func Insert(a []string, index int, value string) []string {
+	if len(a) == index { // nil or empty slice or after last element
+		return append(a, value)
+	}
+	a = append(a[:index+1], a[index:]...) // index < len(a)
+	a[index] = value
+	return a
 }
