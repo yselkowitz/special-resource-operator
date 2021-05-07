@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"strings"
 
+	"github.com/openshift-psap/special-resource-operator/pkg/clients"
 	"github.com/openshift-psap/special-resource-operator/pkg/exit"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -16,7 +17,7 @@ func getPromURLPass(obj *unstructured.Unstructured, r *SpecialResourceReconciler
 	promURL := ""
 	promPass := ""
 
-	grafSecret, err := r.CoreV1().Secrets("openshift-monitoring").Get(context.TODO(), "grafana-datasources", metav1.GetOptions{})
+	grafSecret, err := clients.Interface.CoreV1().Secrets("openshift-monitoring").Get(context.TODO(), "grafana-datasources", metav1.GetOptions{})
 	if err != nil {
 		log.Error(err, "")
 		return promURL, promPass, err

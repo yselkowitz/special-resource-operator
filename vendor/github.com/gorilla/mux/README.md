@@ -518,7 +518,7 @@ func main() {
     // IMPORTANT: you must specify an OPTIONS method matcher for the middleware to set CORS headers
     r.HandleFunc("/foo", fooHandler).Methods(http.MethodGet, http.MethodPut, http.MethodPatch, http.MethodOptions)
     r.Use(mux.CORSMethodMiddleware(r))
-    
+
     http.ListenAndServe(":8080", r)
 }
 
@@ -548,14 +548,14 @@ Would look like:
 > Host: localhost:8080
 > User-Agent: curl/7.59.0
 > Accept: */*
-> 
+>
 < HTTP/1.1 200 OK
 < Access-Control-Allow-Methods: GET,PUT,PATCH,OPTIONS
 < Access-Control-Allow-Origin: *
 < Date: Fri, 28 Jun 2019 20:13:30 GMT
 < Content-Length: 3
 < Content-Type: text/plain; charset=utf-8
-< 
+<
 * Connection #0 to host localhost left intact
 foo
 ```
@@ -670,7 +670,7 @@ func TestMetricsHandler(t *testing.T) {
         }
 
         rr := httptest.NewRecorder()
-	
+
 	// Need to create a router that we can pass the request through so that the vars will be added to the context
 	router := mux.NewRouter()
         router.HandleFunc("/metrics/{type}", MetricsHandler)

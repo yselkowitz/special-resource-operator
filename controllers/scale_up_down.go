@@ -5,6 +5,8 @@ import (
 
 	"fmt"
 
+	"github.com/openshift-psap/special-resource-operator/pkg/cache"
+	"github.com/openshift-psap/special-resource-operator/pkg/clients"
 	errs "github.com/pkg/errors"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -20,7 +22,7 @@ func labelNodesAccordingToState(obj *unstructured.Unstructured, r *SpecialResour
 
 	var err error
 
-	if Node.List, err = cacheNodes(r, true); err != nil {
+	if cache.Node.List, err = cacheNodes(r, true); err != nil {
 		return errs.Wrap(err, "Could not cache nodes for state change")
 	}
 
@@ -34,7 +36,7 @@ func labelNodesAccordingToState(obj *unstructured.Unstructured, r *SpecialResour
 		"device-monitoring":  {st.DeviceMonitoring + "-" + hw: "ready"},
 	}
 
-	for _, node := range Node.List.Items {
+	for _, node := range cache.Node.List.Items {
 		labels := node.GetLabels()
 
 		state := obj.GetAnnotations()["specialresource.openshift.io/state"]
@@ -59,7 +61,7 @@ func labelNodesAccordingToState(obj *unstructured.Unstructured, r *SpecialResour
 
 			updated.SetLabels(labels)
 
-			err := r.Update(context.TODO(), updated)
+			err := clients.Interface.Update(context.TODO(), updated)
 			if apierrors.IsForbidden(err) {
 				return fmt.Errorf("Forbidden check Role, ClusterRole and Bindings for operator %s", err)
 			}

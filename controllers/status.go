@@ -5,6 +5,7 @@ import (
 	"os"
 
 	srov1beta1 "github.com/openshift-psap/special-resource-operator/api/v1beta1"
+	"github.com/openshift-psap/special-resource-operator/pkg/clients"
 	"github.com/openshift-psap/special-resource-operator/pkg/color"
 	"github.com/openshift-psap/special-resource-operator/pkg/exit"
 	configv1 "github.com/openshift/api/config/v1"
@@ -28,7 +29,7 @@ func operatorStatusUpdate(obj *unstructured.Unstructured, r *SpecialResourceReco
 
 	r.specialresource.Status.State = current[0]
 
-	err := r.Status().Update(context.TODO(), &r.specialresource)
+	err := clients.Interface.Status().Update(context.TODO(), &r.specialresource)
 	if err != nil {
 		log.Error(err, "Failed to update SpecialResource status")
 		return
@@ -41,7 +42,7 @@ func (r *SpecialResourceReconciler) clusterOperatorStatusGetOrCreate() error {
 	clusterOperators := &configv1.ClusterOperatorList{}
 
 	opts := []client.ListOption{}
-	err := r.List(context.TODO(), clusterOperators, opts...)
+	err := clients.Interface.List(context.TODO(), clusterOperators, opts...)
 	exit.OnError(err)
 
 	for _, clusterOperator := range clusterOperators.Items {
@@ -57,7 +58,7 @@ func (r *SpecialResourceReconciler) clusterOperatorStatusGetOrCreate() error {
 
 	co := &configv1.ClusterOperator{ObjectMeta: metav1.ObjectMeta{Name: r.GetName()}}
 
-	co, err = r.ClusterOperators().Create(context.TODO(), co, metav1.CreateOptions{})
+	co, err = clients.Interface.ClusterOperators().Create(context.TODO(), co, metav1.CreateOptions{})
 	if err != nil {
 		return errs.Wrap(err, "Failed to create ClusterOperator "+co.Name)
 	}
@@ -98,14 +99,14 @@ func (r *SpecialResourceReconciler) clusterOperatorStatusReconcile(
 }
 
 func (r *SpecialResourceReconciler) clusterOperatorGetLatest() error {
-	co, err := r.ClusterOperators().Get(context.TODO(), r.GetName(), metav1.GetOptions{})
+	co, err := clients.Interface.ClusterOperators().Get(context.TODO(), r.GetName(), metav1.GetOptions{})
 	co.DeepCopyInto(&r.clusterOperator)
 	return err
 }
 
 func (r *SpecialResourceReconciler) clusterOperatorStatusUpdate() error {
 
-	if _, err := r.ClusterOperators().UpdateStatus(context.TODO(), &r.clusterOperator, metav1.UpdateOptions{}); err != nil {
+	if _, err := clients.Interface.ClusterOperators().UpdateStatus(context.TODO(), &r.clusterOperator, metav1.UpdateOptions{}); err != nil {
 		return err
 	}
 	return nil
@@ -119,7 +120,7 @@ func (r *SpecialResourceReconciler) clusterOperatorUpdateRelatedObjects() error 
 
 	// Get all specialresource objects
 	specialresources := &srov1beta1.SpecialResourceList{}
-	err := r.List(context.TODO(), specialresources, []client.ListOption{}...)
+	err := clients.Interface.List(context.TODO(), specialresources, []client.ListOption{}...)
 	if err != nil {
 		return err
 	}

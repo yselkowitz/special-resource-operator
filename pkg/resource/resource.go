@@ -19,9 +19,7 @@ func IsNamespaced(kind string) bool {
 
 func IsNotUpdateable(kind string) bool {
 	// ServiceAccounts cannot be updated, maybe delete and create?
-	if kind == "ServiceAccount" || kind == "Pod" || kind == "BuildConfig" {
-		// Not updating BuildConfig since it triggers a new build in 4.6 was not doing that in <4.6
-		//logger.Info("TODO: Found, not updating, does not work, why? Secret accumulation?")
+	if kind == "ServiceAccount" || kind == "Pod" {
 		return true
 	}
 	return false

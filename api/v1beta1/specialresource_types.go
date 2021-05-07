@@ -100,6 +100,8 @@ type SpecialResourceSpec struct {
 	DriverContainer SpecialResourceDriverContainer `json:"driverContainer,omitempty"`
 	// +kubebuilder:validation:Optional
 	NodeSelector string `json:"nodeSelector,omitempty"`
+	// +kubebuilder:validation:Optional
+	Dependencies []helmer.HelmDependency `json:"dependencies"`
 }
 
 // SpecialResourceStatus defines the observed state of SpecialResource

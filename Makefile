@@ -4,10 +4,11 @@ PULLPOLICY       ?= IfNotPresent
 TAG              ?= $(shell git branch --show-current)
 IMAGE            ?= quay.io/openshift-psap/special-resource-operator:$(TAG)
 CSPLIT           ?= csplit - --prefix="" --suppress-matched --suffix-format="%04d.yaml"  /---/ '{*}' --silent
-YAMLFILES        ?= $(shell  find manifests config/recipes -name "*.yaml"  -not \( -path "config/recipes/lustre-client/*" -prune \) )
+YAMLFILES        ?= $(shell  find manifests-gen config/recipes -name "*.yaml"  -not \( -path "config/recipes/lustre-client/*" -prune \) )
 
 export PATH := go/bin:$(PATH)
 include Makefile.specialresource.mk
+include Makefile.helper.mk
 
 
 patch:
@@ -16,7 +17,9 @@ patch:
 
 
 helm-lint:
-	helm lint -f charts/global/values.yaml charts/example/*
+	helm lint -f charts/global/values.yaml \
+		charts/example/*               \
+		charts/lustre/*
 
 kube-lint: kube-linter
 	$(KUBELINTER) lint $(YAMLFILES)
@@ -68,7 +71,7 @@ endif
 all: $(SPECIALRESOURCE)
 
 # Run tests
-test: # generate fmt vet manifests
+test: # generate fmt vet manifests-gen
 	go test ./... -coverprofile cover.out
 
 # Build manager binary
@@ -76,7 +79,7 @@ manager: generate fmt vet
 	go build -mod=vendor -o /tmp/bin/manager main.go
 
 # Run against the configured Kubernetes cluster in ~/.kube/config
-run: generate fmt vet manifests
+run: generate fmt vet manifests-gen
 	go run -mod=vendor ./main.go
 
 configure:
@@ -88,8 +91,11 @@ configure:
 
 
 # Deploy controller in the configured Kubernetes cluster in ~/.kube/config
-deploy: manifests kustomize configure
+deploy: manifests
 	$(KUSTOMIZE) build config/namespace | kubectl apply -f -
+	$(shell sleep 5)
+	$(KUSTOMIZE) build config/cr | kubectl apply -f -
+
 
 # If the CRD is deleted before the CRs the CRD finalizer will hang forever
 # The specialresource finalizer will not execute either
@@ -100,9 +106,14 @@ undeploy: kustomize
 	$(KUSTOMIZE) build config/namespace | kubectl delete --ignore-not-found -f -
 
 
-# Generate manifests e.g. CRD, RBAC etc.
-manifests: controller-gen
+# Generate manifests-gen e.g. CRD, RBAC etc.
+manifests-gen: controller-gen
 	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=manager-role webhook paths="./..." output:crd:artifacts:config=config/crd/bases
+
+manifests: manifests-gen kustomize configure
+	cd $@; $(KUSTOMIZE) build ../config/namespace | $(CSPLIT)
+	cd $@; bash ../scripts/rename.sh
+	cd $@; $(KUSTOMIZE) build ../config/cr > 0015_specialresource_special-resource-preamble.yaml
 
 # Run go fmt against code
 fmt:
@@ -117,83 +128,20 @@ generate: controller-gen
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
 # Build the docker image
-local-image-build: helm-lint test generate manifests
+local-image-build: helm-lint test generate manifests-gen
 	podman build -f Dockerfile.ubi8 --no-cache . -t $(IMAGE)
 
 # Push the docker image
 local-image-push:
 	podman push $(IMAGE)
 
-# find or download controller-gen
-# download controller-gen if necessary
-controller-gen:
-ifeq (, $(shell which controller-gen))
-	@{ \
-	set -e ;\
-	CONTROLLER_GEN_TMP_DIR=$$(mktemp -d) ;\
-	cd $$CONTROLLER_GEN_TMP_DIR ;\
-	go mod init tmp ;\
-	go get sigs.k8s.io/controller-tools/cmd/controller-gen@v0.5.0 ;\
-	rm -rf $$CONTROLLER_GEN_TMP_DIR ;\
-	}
-CONTROLLER_GEN=$(GOBIN)/controller-gen
-else
-CONTROLLER_GEN=$(shell which controller-gen)
-endif
 
-kustomize:
-ifeq (, $(shell which kustomize))
-	@{ \
-	set -e ;\
-	KUSTOMIZE_GEN_TMP_DIR=$$(mktemp -d) ;\
-	cd $$KUSTOMIZE_GEN_TMP_DIR ;\
-	go mod init tmp ;\
-	go get sigs.k8s.io/kustomize/kustomize/v3@v3.5.4 ;\
-	rm -rf $$KUSTOMIZE_GEN_TMP_DIR ;\
-	}
-KUSTOMIZE=$(GOBIN)/kustomize
-else
-KUSTOMIZE=$(shell which kustomize)
-endif
-
-
-golangci-lint:
-ifeq (, $(shell which golangci-lint))
-	@{ \
-	set -e ;\
-	GOLINT_GEN_TMP_DIR=$$(mktemp -d) ;\
-	cd $$GOLINT_GEN_TMP_DIR ;\
-	go mod init tmp ;\
-	go get github.com/golangci/golangci-lint/cmd/golangci-lint@v1.33.0 ;\
-	rm -rf $$GOLINT_GEN_TMP_DIR ;\
-	}
-GOLANGCILINT=$(GOBIN)/golangci-lint
-else
-GOLANGCILINT=$(shell which golangci-lint)
-endif
-
-kube-linter:
-ifeq (, $(shell which kube-linter))
-	@{ \
-	set -e ;\
-	KUBELINTER_GEN_TMP_DIR=$$(mktemp -d) ;\
-	cd $$KUBELINTER_GEN_TMP_DIR ;\
-	go mod init tmp ;\
-	go get golang.stackrox.io/kube-linter/cmd/kube-linter@v0.0.0-20210328011908-cb34f2cc447f ;\
-	rm -rf $$KUBELINTER_GEN_TMP_DIR ;\
-	}
-KUBELINTER=$(GOBIN)/kube-linter
-else
-KUBELINTER=$(shell which kube-linter)
-endif
-
-
-# Generate bundle manifests and metadata, then validate generated files.
+# Generate bundle manifests-gen and metadata, then validate generated files.
 .PHONY: bundle
-bundle: manifests
-	operator-sdk generate kustomize manifests -q
+bundle: manifests-gen
+	operator-sdk generate kustomize manifests-gen -q
 	cd config/manager && $(KUSTOMIZE) edit set image controller=$(IMAGE)
-	$(KUSTOMIZE) build config/manifests | operator-sdk generate bundle -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS)
+	$(KUSTOMIZE) build config/manifests-gen | operator-sdk generate bundle -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS)
 	operator-sdk bundle validate ./bundle
 
 # Build the bundle image.

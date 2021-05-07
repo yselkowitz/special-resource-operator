@@ -2,13 +2,15 @@ package controllers
 
 import (
 	"context"
-	"fmt"
 	"sort"
 	"strings"
 
 	"github.com/go-logr/logr"
 	"github.com/openshift-psap/special-resource-operator/pkg/assets"
+	"github.com/openshift-psap/special-resource-operator/pkg/cache"
+	"github.com/openshift-psap/special-resource-operator/pkg/clients"
 	"github.com/openshift-psap/special-resource-operator/pkg/exit"
+	"github.com/openshift-psap/special-resource-operator/pkg/filter"
 	"github.com/openshift-psap/special-resource-operator/pkg/helmer"
 	"github.com/openshift-psap/special-resource-operator/pkg/kernel"
 	"github.com/openshift-psap/special-resource-operator/pkg/metrics"
@@ -34,7 +36,7 @@ func getChartTemplates(r *SpecialResourceReconciler) (*unstructured.Unstructured
 	cm.SetKind("ConfigMap")
 
 	namespacedName := types.NamespacedName{Namespace: r.specialresource.Spec.Namespace, Name: r.specialresource.Name}
-	err := r.Get(context.TODO(), namespacedName, cm)
+	err := clients.Interface.Get(context.TODO(), namespacedName, cm)
 
 	if apierrors.IsNotFound(err) {
 		log.Info("SpecialResource chart templates ConfigMap not found, using local repository \"/charts\" for")
@@ -55,7 +57,7 @@ func createImagePullerRoleBinding(r *SpecialResourceReconciler) error {
 	rb.SetKind("RoleBinding")
 
 	namespacedName := types.NamespacedName{Namespace: r.specialresource.Spec.Namespace, Name: "system:image-puller"}
-	err := r.Get(context.TODO(), namespacedName, rb)
+	err := clients.Interface.Get(context.TODO(), namespacedName, rb)
 
 	newSubject := make(map[string]interface{})
 	newSubjects := make([]interface{}, 0)
@@ -124,7 +126,7 @@ func createImagePullerRoleBinding(r *SpecialResourceReconciler) error {
 	err = unstructured.SetNestedSlice(rb.Object, oldSubjects, "subjects")
 	exit.OnError(err)
 
-	if err := r.Update(context.TODO(), rb); err != nil {
+	if err := clients.Interface.Update(context.TODO(), rb); err != nil {
 		return errs.Wrap(err, "Couldn't Update Resource")
 	}
 
@@ -167,7 +169,7 @@ func ReconcileChartStates(r *SpecialResourceReconciler, templates *unstructured.
 		step := nostate
 		step.Templates = append(nostate.Templates, state)
 
-		// We are kernel-affine if the yamlSpec uses {{.KernelFullVersion}}
+		// We are kernel-affine if the yamlSpec uses {{.Values.kernelFullVersion}}
 		// then we need to replicate the object and set a name + os + kernel version
 		kernelAffine := strings.Contains(string(state.Data), ".Values.kernelFullVersion")
 
@@ -205,14 +207,14 @@ func ReconcileChartStates(r *SpecialResourceReconciler, templates *unstructured.
 			step.Values, err = chartutil.CoalesceValues(&step, rinfo)
 			exit.OnError(err)
 
+			/* DO NOT REMOVE: Used for debuggging
 			d, _ := yaml.Marshal(step.Values)
-
-			fmt.Printf("%s\n", d)
+			fmt.Printf("%s\n", d) */
 
 			yaml, err := helmer.TemplateChart(step, step.Values)
 			exit.OnError(err)
 
-			fmt.Printf("--------------------------------------------------\n\n%s\n\n", yaml)
+			// DO NOT REMOVE: fmt.Printf("--------------------------------------------------\n\n%s\n\n", yaml)
 
 			err = createFromYAML(yaml, r, r.specialresource.Spec.Namespace,
 				runInfo.KernelFullVersion,
@@ -287,7 +289,7 @@ func ReconcileChart(r *SpecialResourceReconciler) error {
 		return errs.Wrap(err, "Cannot get ConfigMap with chart templates")
 	}
 
-	Node.List, err = cacheNodes(r, false)
+	cache.Node.List, err = cacheNodes(r, false)
 	exit.OnError(errs.Wrap(err, "Failed to cache Nodes"))
 
 	getRuntimeInformation(r)
@@ -323,6 +325,11 @@ func createFromYAML(yamlFile []byte, r *SpecialResourceReconciler,
 		if resource.IsNamespaced(obj.GetKind()) {
 			obj.SetNamespace(namespace)
 		}
+
+		// We used this for predicate filtering, we're watching a lot of
+		// API Objects we want to ignore all objects that do not have this
+		// label.
+		filter.SetLabel(obj)
 
 		// kernel affinity related attributes only set if there is an
 		// annotation specialresource.openshift.io/kernel-affine: true
@@ -380,7 +387,7 @@ func CRUD(obj *unstructured.Unstructured, r *SpecialResourceReconciler) error {
 		}
 	}
 
-	err := r.Get(context.TODO(), types.NamespacedName{Namespace: obj.GetNamespace(), Name: obj.GetName()}, found)
+	err := clients.Interface.Get(context.TODO(), types.NamespacedName{Namespace: obj.GetNamespace(), Name: obj.GetName()}, found)
 
 	if apierrors.IsNotFound(err) {
 		logger.Info("Not found, creating")
@@ -415,7 +422,7 @@ func CRUD(obj *unstructured.Unstructured, r *SpecialResourceReconciler) error {
 		return errs.Wrap(err, "Couldn't Update ResourceVersion")
 	}
 
-	if err := r.Update(context.TODO(), required); err != nil {
+	if err := clients.Interface.Update(context.TODO(), required); err != nil {
 		return errs.Wrap(err, "Couldn't Update Resource")
 	}
 

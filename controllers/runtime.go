@@ -6,6 +6,8 @@ import (
 	"time"
 
 	srov1beta1 "github.com/openshift-psap/special-resource-operator/api/v1beta1"
+	"github.com/openshift-psap/special-resource-operator/pkg/cache"
+	"github.com/openshift-psap/special-resource-operator/pkg/clients"
 	"github.com/openshift-psap/special-resource-operator/pkg/exit"
 	"github.com/openshift-psap/special-resource-operator/pkg/osversion"
 	"github.com/openshift-psap/special-resource-operator/pkg/warn"
@@ -21,19 +23,15 @@ import (
 	//machineV1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 )
 
-type NodesCache struct {
-	List  *unstructured.UnstructuredList
-	Count int64
-}
 type ResourceGroupName struct {
-	DriverBuild            string
-	DriverContainer        string
-	RuntimeEnablement      string
-	DevicePlugin           string
-	DeviceMonitoring       string
-	DeviceDashboard        string
-	DeviceFeatureDiscovery string
-	CSIDriver              string
+	DriverBuild            string `json:"driverBuild"`
+	DriverContainer        string `json:"driverContainer"`
+	RuntimeEnablement      string `json:"runtimeEnablement"`
+	DevicePlugin           string `json:"devicePlugin"`
+	DeviceMonitoring       string `json:"deviceMonitoring"`
+	DeviceDashboard        string `json:"deviceDashboard"`
+	DeviceFeatureDiscovery string `json:"deviceFeatureDiscovery"`
+	CSIDriver              string `json:"csiDriver"`
 }
 
 type ResourceStateName struct {
@@ -72,16 +70,6 @@ type RuntimeInformation struct {
 	GroupName                 ResourceGroupName             `json:"groupName"`
 	StateName                 ResourceStateName             `json:"stateName"`
 	SpecialResource           srov1beta1.SpecialResource    `json:"specialresource"`
-}
-
-var Node NodesCache
-
-func init() {
-	Node.Count = 0xDEADBEEF
-	Node.List = &unstructured.UnstructuredList{
-		Object: map[string]interface{}{},
-		Items:  []unstructured.Unstructured{},
-	}
 }
 
 var runInfo = RuntimeInformation{
@@ -132,39 +120,30 @@ func logRuntimeInformation() {
 func getRuntimeInformation(r *SpecialResourceReconciler) {
 
 	var err error
-	log.Info("Get Node List")
-	Node.List, err = cacheNodes(r, false)
+	cache.Node.List, err = cacheNodes(r, false)
 	exit.OnError(errs.Wrap(err, "Failed to cache nodes"))
 
-	log.Info("Get Operating System")
 	runInfo.OperatingSystemMajor, runInfo.OperatingSystemMajorMinor, runInfo.OperatingSystemDecimal, err = getOperatingSystem()
 	exit.OnError(errs.Wrap(err, "Failed to get operating system"))
 
-	log.Info("Get Kernel Full Version")
 	runInfo.KernelFullVersion, err = getKernelFullVersion()
 	exit.OnError(errs.Wrap(err, "Failed to get kernel version"))
 
-	log.Info("Get Kernel Patch Version")
 	runInfo.KernelPatchVersion, err = getKernelPatchVersion()
 	exit.OnError(errs.Wrap(err, "Failed to get kernel patch version"))
 
-	log.Info("Get Cluster Version")
 	runInfo.ClusterVersion, runInfo.ClusterVersionMajorMinor, err = getClusterVersion(r)
 	exit.OnError(errs.Wrap(err, "Failed to get cluster version"))
 
-	log.Info("Get Upgrade Info")
 	runInfo.ClusterUpgradeInfo, err = getUpgradeInfo()
 	exit.OnError(errs.Wrap(err, "Failed to get upgrade info"))
 
-	log.Info("Get Push Secret Name")
 	runInfo.PushSecretName, err = retryGetPushSecretName(r)
 	exit.OnError(errs.Wrap(err, "Failed to get push secret name"))
 
-	log.Info("Get OS Image URL")
 	runInfo.OSImageURL, err = getOSImageURL(r)
 	exit.OnError(errs.Wrap(err, "Failed to get OSImageURL"))
 
-	log.Info("Get Proxy Configuration")
 	runInfo.Proxy, err = getProxyConfiguration(r)
 	exit.OnError(errs.Wrap(err, "Failed to get Proxy Configuration"))
 
@@ -180,7 +159,7 @@ func getOperatingSystem() (string, string, string, error) {
 	// Assuming all nodes are running the same os
 	os := "feature.node.kubernetes.io/system-os_release"
 
-	for _, node := range Node.List.Items {
+	for _, node := range cache.Node.List.Items {
 		labels := node.GetLabels()
 		nodeOSrel = labels[os+".ID"]
 		nodeOSmaj = labels[os+".VERSION_ID.major"]
@@ -200,7 +179,7 @@ func getKernelFullVersion() (string, error) {
 	var kernelFullVersion string
 	// Assuming all nodes are running the same kernel version,
 	// one could easily add driver-kernel-versions for each node.
-	for _, node := range Node.List.Items {
+	for _, node := range cache.Node.List.Items {
 		labels := node.GetLabels()
 
 		// We only need to check for the key, the value
@@ -235,7 +214,7 @@ func getKernelPatchVersion() (string, error) {
 
 func getClusterVersion(r *SpecialResourceReconciler) (string, string, error) {
 
-	version, err := r.ClusterVersions().Get(context.TODO(), "version", metav1.GetOptions{})
+	version, err := clients.Interface.ClusterVersions().Get(context.TODO(), "version", metav1.GetOptions{})
 	if err != nil {
 		return "", "", errs.Wrap(err, "ConfigClient unable to get ClusterVersions")
 	}
@@ -287,7 +266,7 @@ func getPushSecretName(r *SpecialResourceReconciler) (string, error) {
 	opts := []client.ListOption{
 		client.InNamespace(r.specialresource.Spec.Namespace),
 	}
-	err := r.List(context.TODO(), secrets, opts...)
+	err := clients.Interface.List(context.TODO(), secrets, opts...)
 	if err != nil {
 		return "", errors.Wrap(err, "Client cannot get SecretList")
 	}
@@ -312,7 +291,7 @@ func getOSImageURL(r *SpecialResourceReconciler) (string, error) {
 	cm.SetKind("ConfigMap")
 
 	namespacedName := types.NamespacedName{Namespace: "openshift-machine-config-operator", Name: "machine-config-osimageurl"}
-	err := r.Get(context.TODO(), namespacedName, cm)
+	err := clients.Interface.Get(context.TODO(), namespacedName, cm)
 	if apierrors.IsNotFound(err) {
 		return "", errs.Wrap(err, "ConfigMap machine-config-osimageurl -n  openshift-machine-config-operator not found")
 	}
@@ -334,7 +313,7 @@ func getProxyConfiguration(r *SpecialResourceReconciler) (ProxyConfiguration, er
 
 	opts := []client.ListOption{}
 
-	err := r.List(context.TODO(), cfgs, opts...)
+	err := clients.Interface.List(context.TODO(), cfgs, opts...)
 	if err != nil {
 		return proxy, errors.Wrap(err, "Client cannot get ProxyList")
 	}

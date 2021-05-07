@@ -18,5 +18,6 @@ groupName:
   driverBuild: "driver-build"
 
 kernelFullVersion: "kernelFullVersion"
+operatingSystemMajor: "8"
 
 

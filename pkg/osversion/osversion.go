@@ -1,7 +1,5 @@
 package osversion
 
-import ()
-
 // Given 3 labels from NFD returns the node OS version in 3 formats:
 // <name><major>, <name><major>.<minor>, and <major.minor>
 // For example rhel8, rhel8.2, 8.2
@@ -19,6 +17,8 @@ func RenderOperatingSystem(rel string, maj string, min string) (string, string, 
 			rhelMin = "1"
 		case min <= "6":
 			rhelMin = "2"
+		case min <= "7":
+			rhelMin = "3"
 		case min <= "8":
 			rhelMin = "3"
 		}

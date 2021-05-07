@@ -61,19 +61,19 @@ spec:
               fieldPath: metadata.namespace
         - name: RELEASE_VERSION
           value: 0.0.1-snapshot
-        image: quay.io/openshift-psap/special-resource-operator:go-mod-1.16
+        image: quay.io/openshift-psap/special-resource-operator:helm-support
         imagePullPolicy: Always
         name: manager
         resources:
           limits:
-            cpu: 200m
-            memory: 100Mi
+            cpu: 300m
+            memory: 200Mi
           requests:
-            cpu: 200m
-            memory: 100Mi
+            cpu: 300m
+            memory: 200Mi
         securityContext:
           allowPrivilegeEscalation: false
-          readOnlyRootFilesystem: true
+          readOnlyRootFilesystem: false
       securityContext:
         runAsGroup: 499
         runAsNonRoot: true

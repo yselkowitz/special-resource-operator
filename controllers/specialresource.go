@@ -5,7 +5,9 @@ import (
 	"fmt"
 
 	srov1beta1 "github.com/openshift-psap/special-resource-operator/api/v1beta1"
+	"github.com/openshift-psap/special-resource-operator/pkg/clients"
 	"github.com/openshift-psap/special-resource-operator/pkg/color"
+	"github.com/openshift-psap/special-resource-operator/pkg/dependencies"
 	"github.com/openshift-psap/special-resource-operator/pkg/exit"
 	"github.com/openshift-psap/special-resource-operator/pkg/helmer"
 	"github.com/openshift-psap/special-resource-operator/pkg/metrics"
@@ -70,14 +72,12 @@ func SpecialResourcesReconcile(r *SpecialResourceReconciler, req ctrl.Request) (
 
 	log = r.Log.WithName(color.Print("preamble", color.Purple))
 
-	log.Info("Controller Request", "Name", req.Name, "Namespace", req.Namespace)
-
 	log.Info("Reconciling SpecialResource(s) in all Namespaces")
 
 	specialresources := &srov1beta1.SpecialResourceList{}
 
 	opts := []client.ListOption{}
-	err := r.List(context.TODO(), specialresources, opts...)
+	err := clients.Interface.List(context.TODO(), specialresources, opts...)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Requested object not found, could have been deleted after reconcile request.
@@ -89,71 +89,85 @@ func SpecialResourcesReconcile(r *SpecialResourceReconciler, req ctrl.Request) (
 		return reconcile.Result{}, err
 	}
 
-	// set specialResourcesCreated metric to the number of specialresources
+	// Set specialResourcesCreated metric to the number of specialresources
 	metrics.SetSpecialResourcesCreated(len(specialresources.Items))
 
-	for _, r.parent = range specialresources.Items {
+	// Do not reconcile all SRs everytime, get the one were the request
+	// came from, use the List for metrics and dashboard, we also need the
+	// List to find the dependency
+	var request int
+	var found bool
+	if request, found = FindSR(specialresources.Items, req.Name, "Name"); !found {
+		exit.OnErrorOrNotFound(found, errs.New("Cannot find SpecialResource in List"))
+	}
 
-		log = r.Log.WithName(color.Print(r.parent.Name, color.Green))
-		log.Info("Resolving Dependencies")
+	r.parent = specialresources.Items[request]
 
-		/* TODO:  Execute finalization logic if CR is being deleted
-		isMarkedToBeDeleted := r.parent.GetDeletionTimestamp() != nil
-		if isMarkedToBeDeleted {
-			r.specialresource = r.parent
-			log.Info("Marked to be deleted, reconciling finalizer")
-			err = reconcileFinalizers(r)
-			return reconcile.Result{}, err
-		}*/
+	log = r.Log.WithName(color.Print(r.parent.Name, color.Green))
 
-		pchart, err := helmer.Load(r.parent.Spec.Chart)
+	if r.parent.Name == "special-resource-preamble" {
+		log.Info("Preamble done, waiting for driver-container requests")
+		return reconcile.Result{}, nil
+	}
+
+	log.Info("Resolving Dependencies")
+
+	/* TODO:  Execute finalization logic if CR is being deleted
+	isMarkedToBeDeleted := r.parent.GetDeletionTimestamp() != nil
+	if isMarkedToBeDeleted {
+		r.specialresource = r.parent
+		log.Info("Marked to be deleted, reconciling finalizer")
+		err = reconcileFinalizers(r)
+		return reconcile.Result{}, err
+	}*/
+
+	pchart, err := helmer.Load(r.parent.Spec.Chart)
+	exit.OnError(err)
+
+	// Only one level dependency support for now
+	for _, dependency := range pchart.Metadata.Dependencies {
+
+		log = r.Log.WithName(color.Print(r.dependency.Name, color.Purple))
+		log.Info("Getting Dependency")
+
+		r.dependency = *dependency
+
+		cchart, err := helmer.Load(r.dependency)
 		exit.OnError(err)
 
-		// Only one level dependency support for now
-		for _, dependency := range pchart.Metadata.Dependencies {
+		dependencies.UpdateConfigMap(r.parent.Name, r.dependency.Name)
 
-			log = r.Log.WithName(color.Print(r.dependency.Name, color.Purple))
-			log.Info("Getting Dependency")
-
-			r.dependency = *dependency
-
-			cchart, err := helmer.Load(r.dependency)
-			exit.OnError(err)
-
-			var child srov1beta1.SpecialResource
-			// Assign the specialresource to the reconciler object
-			if child, err = getDependencyFrom(specialresources, r.dependency.Name); err != nil {
-				log.Info("Could not get SpecialResource dependency", "error", fmt.Sprintf("%v", err))
-				if child, err = createSpecialResourceFrom(r, cchart.Files, r.dependency.Name); err != nil {
-					log.Info("Dependency creation failed", "error", fmt.Sprintf("%v", err))
-					return reconcile.Result{Requeue: true}, nil
-				}
-				// We need to fetch the newly created SpecialResources, reconciling
-				return reconcile.Result{}, nil
-			}
-
-			if err := ReconcileSpecialResourceChart(r, child, cchart); err != nil {
-				// We do not want a stacktrace here, errs.Wrap already created
-				// breadcrumb of errors to follow. Just sprintf with %v rather than %+v
-				log.Info("Could not reconcile chart", "error", fmt.Sprintf("%v", err))
-				//return reconcile.Result{}, errs.New("Reconciling failed")
+		var child srov1beta1.SpecialResource
+		// Assign the specialresource to the reconciler object
+		if child, err = getDependencyFrom(specialresources, r.dependency.Name); err != nil {
+			log.Info("Could not get SpecialResource dependency", "error", fmt.Sprintf("%v", err))
+			if child, err = createSpecialResourceFrom(r, cchart.Files, r.dependency.Name); err != nil {
+				log.Info("RECONCILE REQUEUE: Dependency creation failed ", "error", fmt.Sprintf("%v", err))
 				return reconcile.Result{Requeue: true}, nil
 			}
-
+			// We need to fetch the newly created SpecialResources, reconciling
+			return reconcile.Result{}, nil
 		}
-
-		if err := ReconcileSpecialResourceChart(r, r.parent, pchart); err != nil {
+		if err := ReconcileSpecialResourceChart(r, child, cchart); err != nil {
 			// We do not want a stacktrace here, errs.Wrap already created
 			// breadcrumb of errors to follow. Just sprintf with %v rather than %+v
-			log.Info("Could not reconcile chart", "error", fmt.Sprintf("%v", err))
+			log.Info("RECONCILE REQUEUE: Could not reconcile chart", "error", fmt.Sprintf("%v", err))
 			//return reconcile.Result{}, errs.New("Reconciling failed")
 			return reconcile.Result{Requeue: true}, nil
 		}
 
 	}
 
-	return reconcile.Result{}, nil
+	if err := ReconcileSpecialResourceChart(r, r.parent, pchart); err != nil {
+		// We do not want a stacktrace here, errs.Wrap already created
+		// breadcrumb of errors to follow. Just sprintf with %v rather than %+v
+		log.Info("RECONCILE REQUEUE: Could not reconcile chart", "error", fmt.Sprintf("%v", err))
+		//return reconcile.Result{}, errs.New("Reconciling failed")
+		return reconcile.Result{Requeue: true}, nil
+	}
 
+	log.Info("RECONCILE SUCCESS: All resources done")
+	return reconcile.Result{}, nil
 }
 
 func ReconcileSpecialResourceChart(r *SpecialResourceReconciler, sr srov1beta1.SpecialResource, chart *chart.Chart) error {
@@ -176,21 +190,21 @@ func ReconcileSpecialResourceChart(r *SpecialResourceReconciler, sr srov1beta1.S
 	return ReconcileChart(r)
 }
 
-func FindSR(a []srov1beta1.SpecialResource, x string, by string) int {
+func FindSR(a []srov1beta1.SpecialResource, x string, by string) (int, bool) {
 	for i, n := range a {
 		if by == "Name" {
 			if x == n.GetName() {
-				return i
+				return i, true
 			}
 		}
 	}
-	return -1
+	return -1, false
 }
 
 func getDependencyFrom(specialresources *srov1beta1.SpecialResourceList, name string) (srov1beta1.SpecialResource, error) {
 
 	log.Info("Looking for SpecialResource in fetched List (all namespaces)")
-	if idx := FindSR(specialresources.Items, name, "Name"); idx != -1 {
+	if idx, found := FindSR(specialresources.Items, name, "Name"); found {
 		return specialresources.Items[idx], nil
 	}
 

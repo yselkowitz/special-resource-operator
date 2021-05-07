@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/openshift-psap/special-resource-operator/pkg/clients"
 	"github.com/openshift-psap/special-resource-operator/pkg/exit"
+	"github.com/openshift-psap/special-resource-operator/pkg/poll"
 	errs "github.com/pkg/errors"
 	client "sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -61,14 +63,17 @@ func afterCRUDhooks(obj *unstructured.Unstructured, r *SpecialResourceReconciler
 
 	if wait, found := annotations["specialresource.openshift.io/wait"]; found && wait == "true" {
 		log.Info("specialresource.openshift.io/wait")
-		if err := waitForResource(obj, r); err != nil {
+
+		clients.Namespace = r.specialresource.Spec.Namespace
+		if err := poll.ForResource(obj); err != nil {
 			return errs.Wrap(err, "Could not wait for resource")
 		}
 	}
 
 	if pattern, found := annotations["specialresource.openshift.io/wait-for-logs"]; found && len(pattern) > 0 {
 		log.Info("specialresource.openshift.io/wait-for-logs")
-		if err := waitForDaemonSetLogs(obj, r, pattern); err != nil {
+		clients.Namespace = r.specialresource.Spec.Namespace
+		if err := poll.ForDaemonSetLogs(obj, pattern); err != nil {
 			return errs.Wrap(err, "Could not wait for DaemonSet logs")
 		}
 	}
@@ -80,7 +85,7 @@ func afterCRUDhooks(obj *unstructured.Unstructured, r *SpecialResourceReconciler
 
 func checkForImagePullBackOff(obj *unstructured.Unstructured, r *SpecialResourceReconciler) error {
 
-	if err := waitForDaemonSet(obj, r); err == nil {
+	if err := poll.ForDaemonSet(obj); err == nil {
 		return nil
 	}
 

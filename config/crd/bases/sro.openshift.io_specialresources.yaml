@@ -47,6 +47,26 @@ spec:
                 - repository
                 - version
                 type: object
+              dependencies:
+                items:
+                  properties:
+                    name:
+                      type: string
+                    repository:
+                      type: string
+                    tags:
+                      items:
+                        type: string
+                      type: array
+                    version:
+                      type: string
+                  required:
+                  - name
+                  - repository
+                  - tags
+                  - version
+                  type: object
+                type: array
               driverContainer:
                 description: SpecialResourceDriverContainer defines the desired state of SpecialResource
                 properties:

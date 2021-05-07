@@ -3,6 +3,8 @@ package controllers
 import (
 	"context"
 
+	"github.com/openshift-psap/special-resource-operator/pkg/cache"
+	"github.com/openshift-psap/special-resource-operator/pkg/clients"
 	"github.com/openshift-psap/special-resource-operator/pkg/color"
 	"github.com/openshift-psap/special-resource-operator/pkg/exit"
 	"github.com/pkg/errors"
@@ -24,11 +26,9 @@ func SpecialResourceUpgrade(r *SpecialResourceReconciler, req ctrl.Request) (ctr
 
 	log = r.Log.WithName(color.Print("upgrade", color.Red))
 
-	log.Info("Get Node List")
-	Node.List, err = cacheNodes(r, false)
+	cache.Node.List, err = cacheNodes(r, false)
 	exit.OnError(errs.Wrap(err, "Failed to cache nodes"))
 
-	log.Info("Get Upgrade Info")
 	runInfo.ClusterUpgradeInfo, err = getUpgradeInfo()
 	exit.OnError(errs.Wrap(err, "Failed to get upgrade info"))
 
@@ -42,13 +42,13 @@ func cacheNodes(r *SpecialResourceReconciler, force bool) (*unstructured.Unstruc
 	// The initial list is what we're working with
 	// a SharedInformer will update the list of nodes if
 	// more nodes join the cluster.
-	cached := int64(len(Node.List.Items))
-	if cached == Node.Count && !force {
-		return Node.List, nil
+	cached := int64(len(cache.Node.List.Items))
+	if cached == cache.Node.Count && !force {
+		return cache.Node.List, nil
 	}
 
-	Node.List.SetAPIVersion("v1")
-	Node.List.SetKind("NodeList")
+	cache.Node.List.SetAPIVersion("v1")
+	cache.Node.List.SetKind("NodeList")
 
 	opts := []client.ListOption{}
 
@@ -61,12 +61,12 @@ func cacheNodes(r *SpecialResourceReconciler, force bool) (*unstructured.Unstruc
 		opts = append(opts, client.MatchingLabels{"node-role.kubernetes.io/worker": ""})
 	}
 
-	err := r.List(context.TODO(), Node.List, opts...)
+	err := clients.Interface.List(context.TODO(), cache.Node.List, opts...)
 	if err != nil {
 		return nil, errors.Wrap(err, "Client cannot get NodeList")
 	}
 
-	return Node.List, err
+	return cache.Node.List, err
 }
 
 func getUpgradeInfo() (map[string]NodeUpgradeVersion, error) {
@@ -76,7 +76,7 @@ func getUpgradeInfo() (map[string]NodeUpgradeVersion, error) {
 
 	// Assuming all nodes are running the same kernel version,
 	// one could easily add driver-kernel-versions for each node.
-	for _, node := range Node.List.Items {
+	for _, node := range cache.Node.List.Items {
 
 		var rhelVersion string
 		var kernelFullVersion string

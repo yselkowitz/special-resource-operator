@@ -21,15 +21,22 @@ import (
 
 	"github.com/go-logr/logr"
 	srov1beta1 "github.com/openshift-psap/special-resource-operator/api/v1beta1"
+	"github.com/openshift-psap/special-resource-operator/pkg/color"
 	"github.com/openshift-psap/special-resource-operator/pkg/conditions"
+	"github.com/openshift-psap/special-resource-operator/pkg/filter"
+	buildv1 "github.com/openshift/api/build/v1"
+	secv1 "github.com/openshift/api/security/v1"
+
 	configv1 "github.com/openshift/api/config/v1"
-	clientconfigv1 "github.com/openshift/client-go/config/clientset/versioned/typed/config/v1"
+	imagev1 "github.com/openshift/api/image/v1"
+
 	errs "github.com/pkg/errors"
 	"helm.sh/helm/v3/pkg/chart"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
+	storagev1 "k8s.io/api/storage/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -43,8 +50,6 @@ var (
 // SpecialResourceReconciler reconciles a SpecialResource object
 type SpecialResourceReconciler struct {
 	client.Client
-	kubernetes.Clientset
-	clientconfigv1.ConfigV1Client
 
 	Log    logr.Logger
 	Scheme *runtime.Scheme
@@ -62,6 +67,9 @@ func (r *SpecialResourceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, er
 	var err error
 	var res reconcile.Result
 
+	log = r.Log.WithName(color.Print("controller", color.Brown))
+	log.Info("Controller Request", "Name", req.Name, "Namespace", req.Namespace)
+
 	conds := conditions.NotAvailableProgressingNotDegraded(
 		"Reconciling "+req.Name,
 		"Reconciling "+req.Name,
@@ -69,27 +77,27 @@ func (r *SpecialResourceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, er
 	)
 	// Do some preflight checks and get the cluster upgrade info
 	if res, err = SpecialResourceUpgrade(r, req); err != nil {
-		return res, errs.Wrap(err, "Cannot upgrade special resource")
+		return res, errs.Wrap(err, "RECONCILE ERROR: Cannot upgrade special resource")
 	}
 	// A resource is being reconciled set status to not available and only
 	// if the reconcilation succeeds we're updating the conditions
 	if res, err = SpecialResourcesStatus(r, req, conds); err != nil {
-		return res, errs.Wrap(err, "Cannot update special resource status")
+		return res, errs.Wrap(err, "RECONCILE ERROR: Cannot update special resource status")
 	}
 	// Reconcile all specialresources
 	if res, err = SpecialResourcesReconcile(r, req); err == nil && !res.Requeue {
 		conds = conditions.AvailableNotProgressingNotDegraded()
 	} else {
-		return res, errs.Wrap(err, "Cannot reconcile special resource")
+		return res, errs.Wrap(err, "RECONCILE ERROR: Cannot reconcile special resource")
 	}
 
 	// Only if we're successfull we're going to update the status to
 	// Available otherwise return the reconcile error
 	if res, err = SpecialResourcesStatus(r, req, conds); err != nil {
-		log.Info("Cannot update special resource status", "error", fmt.Sprintf("%v", err))
+		log.Info("RECONCILE ERROR: Cannot update special resource status", "error", fmt.Sprintf("%v", err))
 		return res, nil
 	}
-
+	log.Info("RECONCILE SUCCESS: Reconcile")
 	return reconcile.Result{}, nil
 }
 
@@ -99,8 +107,21 @@ func (r *SpecialResourceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&srov1beta1.SpecialResource{}).
 		Owns(&v1.Pod{}).
 		Owns(&appsv1.DaemonSet{}).
+		Owns(&appsv1.Deployment{}).
+		Owns(&storagev1.CSIDriver{}).
+		Owns(&imagev1.ImageStream{}).
+		Owns(&buildv1.BuildConfig{}).
+		Owns(&v1.ConfigMap{}).
+		Owns(&v1.ServiceAccount{}).
+		Owns(&rbacv1.Role{}).
+		Owns(&rbacv1.RoleBinding{}).
+		Owns(&rbacv1.ClusterRole{}).
+		Owns(&rbacv1.ClusterRoleBinding{}).
+		Owns(&secv1.SecurityContextConstraints{}).
+		Owns(&v1.Secret{}).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: 1,
 		}).
+		WithEventFilter(filter.Predicate()).
 		Complete(r)
 }

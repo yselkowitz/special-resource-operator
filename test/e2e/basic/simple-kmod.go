@@ -52,7 +52,7 @@ var _ = ginkgo.Describe("[basic][simple-kmod] create and deploy simple-kmod", fu
 		hash64 := hash.FNV64a(nodeOSVersion + "-" + kernelVersion)
 		_, _ = Logf("Info: hash64 for object names: " + hash64)
 
-		simpleKmodCrYAML, err := ioutil.ReadFile("../../../config/recipes/simple-kmod/0000-simple-kmod-cr.yaml")
+		simpleKmodCrYAML, err := ioutil.ReadFile("../../../charts/example/simple-kmod-0.0.1/simple-kmod.yaml")
 		if err != nil {
 			panic(err)
 		}

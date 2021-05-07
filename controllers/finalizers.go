@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/openshift-psap/special-resource-operator/pkg/clients"
 	"github.com/openshift-psap/special-resource-operator/pkg/exit"
 	"github.com/openshift-psap/special-resource-operator/pkg/metrics"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -22,7 +23,7 @@ func reconcileFinalizers(r *SpecialResourceReconciler) error {
 		}
 
 		controllerutil.RemoveFinalizer(&r.specialresource, specialresourceFinalizer)
-		err := r.Update(context.TODO(), &r.specialresource)
+		err := clients.Interface.Update(context.TODO(), &r.specialresource)
 		if err != nil {
 			log.Info("Could not remove finalizer after running finalization logic", "error", fmt.Sprintf("%v", err))
 			return err
@@ -71,7 +72,7 @@ func addFinalizer(r *SpecialResourceReconciler) error {
 	controllerutil.AddFinalizer(&r.specialresource, specialresourceFinalizer)
 
 	// Update CR
-	err := r.Update(context.TODO(), &r.specialresource)
+	err := clients.Interface.Update(context.TODO(), &r.specialresource)
 	if err != nil {
 		log.Info("Adding finalizer failed", "error", fmt.Sprintf("%v", err))
 		return err

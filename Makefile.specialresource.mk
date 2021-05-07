@@ -1,7 +1,7 @@
 $(SPECIALRESOURCE):
-	kubectl apply -f charts/$(SPECIALRESOURCE)/0000-$(SPECIALRESOURCE)-cr.yaml
+	kubectl apply -f charts/$(SPECIALRESOURCE)/$(SPECIALRESOURCE).yaml
 
 assets:
-	cd config/recipes/$(SPECIALRESOURCE)/manifests && $(KUSTOMIZE) edit set namespace $(SPECIALRESOURCE)
+	cd charts/$(SPECIALRESOURCE)/templates && $(KUSTOMIZE) edit set namespace $(SPECIALRESOURCE)
 	kubectl create ns $(SPECIALRESOURCE) --dry-run=client -o yaml | kubectl apply -f -
-	kubectl apply -k config/recipes/$(SPECIALRESOURCE)/manifests
+	kubectl apply -k charts/$(SPECIALRESOURCE)/templates

@@ -34,6 +34,21 @@ type HelmChart struct {
 	Repository string `json:"repository"`
 }
 
+type HelmDependency struct {
+	Name       string   `json:"name"`
+	Version    string   `json:"version"`
+	Repository string   `json:"repository"`
+	Tags       []string `json:"tags"`
+}
+
+func (in *HelmDependency) DeepCopyInto(out *HelmDependency) {
+	out.Name = in.Name
+	out.Version = in.Version
+	out.Repository = in.Repository
+	out.Tags = make([]string, len(in.Tags))
+	copy(out.Tags, in.Tags)
+}
+
 func Load(ch interface{}) (*chart.Chart, error) {
 
 	var curr HelmChart
@@ -43,15 +58,12 @@ func Load(ch interface{}) (*chart.Chart, error) {
 		curr.Name = v.Name
 		curr.Version = v.Version
 		curr.Repository = v.Repository
-		break
 	case chart.Dependency:
 		curr.Name = v.Name
 		curr.Version = v.Version
 		curr.Repository = v.Repository
-		break
 	case HelmChart:
 		curr = v
-		break
 	default:
 		exit.OnError(errs.New("Unknown Type:" + reflect.TypeOf(v).String()))
 
@@ -71,11 +83,11 @@ func Load(ch interface{}) (*chart.Chart, error) {
 }
 
 func OpenShiftInstallOrder() error {
-	// ImageStream
-	// BuildConfig
+
 	idx := slice.Find(releaseutil.InstallOrder, "Service")
 	releaseutil.InstallOrder = slice.Insert(releaseutil.InstallOrder, idx, "BuildConfig")
 	releaseutil.InstallOrder = slice.Insert(releaseutil.InstallOrder, idx, "ImageStream")
+	releaseutil.InstallOrder = slice.Insert(releaseutil.InstallOrder, idx, "SecurityContextConstraints")
 
 	return nil
 }
