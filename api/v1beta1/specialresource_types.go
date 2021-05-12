@@ -99,7 +99,7 @@ type SpecialResourceSpec struct {
 	// +kubebuilder:validation:Optional
 	DriverContainer SpecialResourceDriverContainer `json:"driverContainer,omitempty"`
 	// +kubebuilder:validation:Optional
-	NodeSelector string `json:"nodeSelector,omitempty"`
+	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
 	// +kubebuilder:validation:Optional
 	Dependencies []helmer.HelmDependency `json:"dependencies"`
 }

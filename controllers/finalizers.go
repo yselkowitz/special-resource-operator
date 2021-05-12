@@ -3,12 +3,8 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"sort"
 
 	"github.com/openshift-psap/special-resource-operator/pkg/clients"
-	"github.com/openshift-psap/special-resource-operator/pkg/exit"
-	"github.com/openshift-psap/special-resource-operator/pkg/metrics"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
@@ -37,31 +33,6 @@ func finalizeSpecialResource(r *SpecialResourceReconciler) error {
 	// needs to do before the CR can be deleted. Examples
 	// of finalizers include performing backups and deleting
 	// resources that are not owned by this CR, like a PVC.
-	var err error
-	var config *unstructured.Unstructured
-	var manifests map[string]interface{}
-	var found bool
-
-	config, err = getChartTemplates(r)
-	if err != nil {
-		log.Info("Failed to get hardware states while reconciling finalizer")
-		return err
-	}
-
-	manifests, found, err = unstructured.NestedMap(config.Object, "data")
-	exit.OnErrorOrNotFound(found, err)
-
-	states := make([]string, 0, len(manifests))
-	for key := range manifests {
-		states = append(states, key)
-	}
-
-	sort.Strings(states)
-
-	for _, state := range states {
-		log.Info("Deleting metric for", "state:", state)
-		metrics.DeleteCompleteStates(r.specialresource.Name, state)
-	}
 
 	log.Info("Successfully finalized", "SpecialResource:", r.specialresource.Name)
 	return nil

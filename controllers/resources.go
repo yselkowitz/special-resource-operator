@@ -16,8 +16,10 @@ import (
 	"github.com/openshift-psap/special-resource-operator/pkg/metrics"
 	"github.com/openshift-psap/special-resource-operator/pkg/resource"
 	"github.com/openshift-psap/special-resource-operator/pkg/slice"
+	"github.com/openshift-psap/special-resource-operator/pkg/state"
+	"github.com/openshift-psap/special-resource-operator/pkg/upgrade"
 	"github.com/openshift-psap/special-resource-operator/pkg/yamlutil"
-	errs "github.com/pkg/errors"
+	"github.com/pkg/errors"
 	"helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/chartutil"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -83,19 +85,19 @@ func createImagePullerRoleBinding(r *SpecialResourceReconciler) error {
 		err = unstructured.SetNestedSlice(rb.Object, newSubjects, "subjects")
 		exit.OnError(err)
 
-		if err := r.Create(context.TODO(), rb); err != nil {
-			return errs.Wrap(err, "Couldn't Create Resource")
+		if err := clients.Interface.Create(context.TODO(), rb); err != nil {
+			return errors.Wrap(err, "Couldn't Create Resource")
 		}
 
 		return nil
 	}
 
 	if apierrors.IsForbidden(err) {
-		return errs.Wrap(err, "Forbidden check Role, ClusterRole and Bindings for operator")
+		return errors.Wrap(err, "Forbidden check Role, ClusterRole and Bindings for operator")
 	}
 
 	if err != nil {
-		return errs.Wrap(err, "Unexpected error")
+		return errors.Wrap(err, "Unexpected error")
 	}
 
 	log.Info("ImageReference RoleBinding found, updating")
@@ -127,7 +129,7 @@ func createImagePullerRoleBinding(r *SpecialResourceReconciler) error {
 	exit.OnError(err)
 
 	if err := clients.Interface.Update(context.TODO(), rb); err != nil {
-		return errs.Wrap(err, "Couldn't Update Resource")
+		return errors.Wrap(err, "Couldn't Update Resource")
 	}
 
 	return nil
@@ -139,13 +141,13 @@ func ReconcileChartStates(r *SpecialResourceReconciler, templates *unstructured.
 	nostate := r.chart
 	nostate.Templates = []*chart.File{}
 
-	states := []*chart.File{}
+	stateYAMLS := []*chart.File{}
 
 	// First get all non-state related files from the templates
 	// and save the states in a temporary slice for single execution
 	for _, template := range r.chart.Templates {
 		if assets.ValidStateName(template.Name) {
-			states = append(states, template)
+			stateYAMLS = append(stateYAMLS, template)
 		} else {
 			nostate.Templates = append(nostate.Templates, template)
 		}
@@ -155,53 +157,59 @@ func ReconcileChartStates(r *SpecialResourceReconciler, templates *unstructured.
 	// the states otherwise use the templates from the chart directory
 	if templates != nil {
 		log.Info("Getting states from ConfigMap")
-		states = assets.FromConfigMap(templates)
+		stateYAMLS = assets.FromConfigMap(templates)
 	}
 
-	sort.Slice(states, func(i, j int) bool {
-		return states[i].Name < states[j].Name
+	sort.Slice(stateYAMLS, func(i, j int) bool {
+		return stateYAMLS[i].Name < stateYAMLS[j].Name
 	})
 
-	for _, state := range states {
+	for _, stateYAML := range stateYAMLS {
 
-		log.Info("Executing", "State", state.Name)
+		log.Info("Executing", "State", stateYAML.Name)
+
+		// Every YAML is one state, we generate the name of the
+		// state special-resource + first 4 digits of the state
+		// e.g.: simple-kmod-0000 this can be used for scheduling or
+		// affinity, anti-affinity
+		state.GenerateName(stateYAML, r.specialresource.Name)
 
 		step := nostate
-		step.Templates = append(nostate.Templates, state)
+		step.Templates = append(nostate.Templates, stateYAML)
 
 		// We are kernel-affine if the yamlSpec uses {{.Values.kernelFullVersion}}
 		// then we need to replicate the object and set a name + os + kernel version
-		kernelAffine := strings.Contains(string(state.Data), ".Values.kernelFullVersion")
+		kernelAffine := strings.Contains(string(stateYAML.Data), ".Values.kernelFullVersion")
 
 		var replicas int
-		var version NodeUpgradeVersion
+		var version upgrade.NodeVersion
 
 		// The cluster has more then one kernel version running
 		// we're replicating the driver-container DaemonSet to
 		// the number of kernel versions running in the cluster
-		if len(runInfo.ClusterUpgradeInfo) == 0 {
-			exit.OnError(errs.New("No KernelVersion detected, something is wrong"))
+		if len(RunInfo.ClusterUpgradeInfo) == 0 {
+			exit.OnError(errors.New("No KernelVersion detected, something is wrong"))
 		}
 
 		//var replicas is to keep track of the number of replicas
 		// and either to break or continue the for looop
-		for runInfo.KernelFullVersion, version = range runInfo.ClusterUpgradeInfo {
+		for RunInfo.KernelFullVersion, version = range RunInfo.ClusterUpgradeInfo {
 
-			runInfo.ClusterVersionMajorMinor = version.ClusterVersion
-			runInfo.OperatingSystemDecimal = version.OSVersion
+			RunInfo.ClusterVersionMajorMinor = version.ClusterVersion
+			RunInfo.OperatingSystemDecimal = version.OSVersion
 
 			if kernelAffine {
-				log.Info("ClusterUpgradeInfo",
-					"kernel", runInfo.KernelFullVersion,
-					"os", runInfo.OperatingSystemDecimal,
-					"cluster", runInfo.ClusterVersionMajorMinor)
+				log.Info("KernelAffine: ClusterUpgradeInfo",
+					"kernel", RunInfo.KernelFullVersion,
+					"os", RunInfo.OperatingSystemDecimal,
+					"cluster", RunInfo.ClusterVersionMajorMinor)
 			}
 
 			var err error
 			step.Values, err = chartutil.CoalesceValues(&step, r.specialresource.Spec.Set.Object)
 			exit.OnError(err)
 
-			rinfo, err := runtime.DefaultUnstructuredConverter.ToUnstructured(&runInfo)
+			rinfo, err := runtime.DefaultUnstructuredConverter.ToUnstructured(&RunInfo)
 			exit.OnError(err)
 
 			step.Values, err = chartutil.CoalesceValues(&step, rinfo)
@@ -217,17 +225,17 @@ func ReconcileChartStates(r *SpecialResourceReconciler, templates *unstructured.
 			// DO NOT REMOVE: fmt.Printf("--------------------------------------------------\n\n%s\n\n", yaml)
 
 			err = createFromYAML(yaml, r, r.specialresource.Spec.Namespace,
-				runInfo.KernelFullVersion,
-				runInfo.OperatingSystemDecimal)
+				RunInfo.KernelFullVersion,
+				RunInfo.OperatingSystemDecimal)
 
 			replicas += 1
 
 			// If the first replica fails we want to create all remaining
 			// ones for parallel startup, otherwise we would wait for the first
 			// then for the second etc.
-			if err != nil && replicas == len(runInfo.ClusterUpgradeInfo) {
-				metrics.SetCompletedState(r.specialresource.Name, state.Name, 0)
-				return errs.Wrap(err, "Failed to create state: "+state.Name)
+			if err != nil && replicas == len(RunInfo.ClusterUpgradeInfo) {
+				metrics.SetCompletedState(r.specialresource.Name, stateYAML.Name, 0)
+				return errors.Wrap(err, "Failed to create state: "+stateYAML.Name)
 			}
 
 			// We're always doing one run to create a non kernel affine resource
@@ -236,7 +244,7 @@ func ReconcileChartStates(r *SpecialResourceReconciler, templates *unstructured.
 			}
 
 		}
-		metrics.SetCompletedState(r.specialresource.Name, state.Name, 1)
+		metrics.SetCompletedState(r.specialresource.Name, stateYAML.Name, 1)
 	}
 
 	return nil
@@ -270,13 +278,15 @@ metadata:
 func ReconcileChart(r *SpecialResourceReconciler) error {
 
 	var err error
-	templates := &unstructured.Unstructured{}
+	templates := &unstructured.Unstructured{
+		Object: map[string]interface{}{},
+	}
 	// Leave this here, this is crucial for all following work
 	// Creating and setting the working namespace for the specialresource
 	// specialresource name == namespace if not metadata.namespace is set
 	createSpecialResourceNamespace(r)
 	if err := createImagePullerRoleBinding(r); err != nil {
-		return errs.Wrap(err, "Could not create ImagePuller RoleBinding ")
+		return errors.Wrap(err, "Could not create ImagePuller RoleBinding ")
 
 	}
 
@@ -286,17 +296,17 @@ func ReconcileChart(r *SpecialResourceReconciler) error {
 	// for testing.
 	log.Info("Getting chart templates from ConfigMap")
 	if templates, err = getChartTemplates(r); err != nil {
-		return errs.Wrap(err, "Cannot get ConfigMap with chart templates")
+		return errors.Wrap(err, "Cannot get ConfigMap with chart templates")
 	}
 
-	cache.Node.List, err = cacheNodes(r, false)
-	exit.OnError(errs.Wrap(err, "Failed to cache Nodes"))
+	err = cache.Nodes(r.specialresource.Spec.NodeSelector, false)
+	exit.OnError(errors.Wrap(err, "Failed to cache Nodes"))
 
 	getRuntimeInformation(r)
 	logRuntimeInformation()
 
 	if err := ReconcileChartStates(r, templates); err != nil {
-		return errs.Wrap(err, "Cannot reconcile hardware states")
+		return errors.Wrap(err, "Cannot reconcile hardware states")
 	}
 
 	return nil
@@ -309,6 +319,8 @@ func createFromYAML(yamlFile []byte, r *SpecialResourceReconciler,
 
 	scanner := yamlutil.NewYAMLScanner(yamlFile)
 
+	nodeSelector := r.specialresource.Spec.NodeSelector
+
 	for scanner.Scan() {
 
 		yamlSpec := scanner.Bytes()
@@ -316,11 +328,11 @@ func createFromYAML(yamlFile []byte, r *SpecialResourceReconciler,
 		obj := &unstructured.Unstructured{}
 		jsonSpec, err := yaml.YAMLToJSON(yamlSpec)
 		if err != nil {
-			return errs.Wrap(err, "Could not convert yaml file to json"+string(yamlSpec))
+			return errors.Wrap(err, "Could not convert yaml file to json"+string(yamlSpec))
 		}
 
 		err = obj.UnmarshalJSON(jsonSpec)
-		exit.OnError(errs.Wrap(err, "Cannot unmarshall json spec, check your manifests"))
+		exit.OnError(errors.Wrap(err, "Cannot unmarshall json spec, check your manifests"))
 
 		if resource.IsNamespaced(obj.GetKind()) {
 			obj.SetNamespace(namespace)
@@ -334,10 +346,15 @@ func createFromYAML(yamlFile []byte, r *SpecialResourceReconciler,
 		// kernel affinity related attributes only set if there is an
 		// annotation specialresource.openshift.io/kernel-affine: true
 		if kernel.IsObjectAffine(obj) {
-			err = kernel.SetAffineAttributes(obj, kernelFullVersion,
+			err := kernel.SetAffineAttributes(obj, kernelFullVersion,
 				operatingSystemMajorMinor)
-			exit.OnError(errs.Wrap(err, "Cannot set kernel affine attributes"))
+			exit.OnError(errors.Wrap(err, "Cannot set kernel affine attributes"))
 		}
+
+		// Add nodeSelector terms for the specialresource
+		// we do not want to spread HW enablement stacks on all nodes
+		err = resource.SetNodeSelectorTerms(obj, nodeSelector)
+		exit.OnError(errors.Wrap(err, "setting NodeSelectorTerms failed"))
 
 		// We are only building a driver-container if we cannot pull the image
 		// We are asuming that vendors provide pre compiled DriverContainers
@@ -349,21 +366,21 @@ func createFromYAML(yamlFile []byte, r *SpecialResourceReconciler,
 
 		// Callbacks before CRUD will update the manifests
 		if err := beforeCRUDhooks(obj, r); err != nil {
-			return errs.Wrap(err, "Before CRUD hooks failed")
+			return errors.Wrap(err, "Before CRUD hooks failed")
 		}
 		// Create Update Delete Patch resources
 		err = CRUD(obj, r)
-		exit.OnError(errs.Wrap(err, "CRUD exited non-zero"))
+		exit.OnError(errors.Wrap(err, "CRUD exited non-zero"))
 
 		// Callbacks after CRUD will wait for ressource and check status
 		if err := afterCRUDhooks(obj, r); err != nil {
-			return errs.Wrap(err, "After CRUD hooks failed")
+			return errors.Wrap(err, "After CRUD hooks failed")
 		}
 
 	}
 
 	if err := scanner.Err(); err != nil {
-		return errs.Wrap(err, "Failed to scan manifest")
+		return errors.Wrap(err, "Failed to scan manifest")
 	}
 	return nil
 }
@@ -383,7 +400,7 @@ func CRUD(obj *unstructured.Unstructured, r *SpecialResourceReconciler) error {
 	// SpecialResource is the parent, all other objects are childs and need a reference
 	if obj.GetKind() != "SpecialResource" {
 		if err := controllerutil.SetControllerReference(&r.specialresource, obj, r.Scheme); err != nil {
-			return errs.Wrap(err, "Failed to set controller reference")
+			return errors.Wrap(err, "Failed to set controller reference")
 		}
 	}
 
@@ -391,18 +408,18 @@ func CRUD(obj *unstructured.Unstructured, r *SpecialResourceReconciler) error {
 
 	if apierrors.IsNotFound(err) {
 		logger.Info("Not found, creating")
-		if err := r.Create(context.TODO(), obj); err != nil {
-			return errs.Wrap(err, "Couldn't Create Resource")
+		if err := clients.Interface.Create(context.TODO(), obj); err != nil {
+			return errors.Wrap(err, "Couldn't Create Resource")
 		}
 		return nil
 	}
 
 	if apierrors.IsForbidden(err) {
-		return errs.Wrap(err, "Forbidden check Role, ClusterRole and Bindings for operator")
+		return errors.Wrap(err, "Forbidden check Role, ClusterRole and Bindings for operator")
 	}
 
 	if err != nil {
-		return errs.Wrap(err, "Unexpected error")
+		return errors.Wrap(err, "Unexpected error")
 	}
 	// Not updating Pod because we can only update image and some other
 	// specific minor fields.
@@ -419,11 +436,11 @@ func CRUD(obj *unstructured.Unstructured, r *SpecialResourceReconciler) error {
 	// before we update a resource, we do not care when creating, hence
 	// !leave this here!
 	if err := resource.UpdateResourceVersion(required, found); err != nil {
-		return errs.Wrap(err, "Couldn't Update ResourceVersion")
+		return errors.Wrap(err, "Couldn't Update ResourceVersion")
 	}
 
 	if err := clients.Interface.Update(context.TODO(), required); err != nil {
-		return errs.Wrap(err, "Couldn't Update Resource")
+		return errors.Wrap(err, "Couldn't Update Resource")
 	}
 
 	return nil
@@ -437,15 +454,15 @@ func rebuildDriverContainer(obj *unstructured.Unstructured, r *SpecialResourceRe
 		annotations := obj.GetAnnotations()
 		if vendor, ok := annotations["specialresource.openshift.io/driver-container-vendor"]; ok {
 			logger.Info("driver-container-vendor", "vendor", vendor)
-			if vendor == runInfo.UpdateVendor {
-				logger.Info("vendor == updateVendor", "vendor", vendor, "updateVendor", runInfo.UpdateVendor)
+			if vendor == RunInfo.UpdateVendor {
+				logger.Info("vendor == updateVendor", "vendor", vendor, "updateVendor", RunInfo.UpdateVendor)
 				return nil
 			}
-			logger.Info("vendor != updateVendor", "vendor", vendor, "updateVendor", runInfo.UpdateVendor)
-			return errs.New("vendor != updateVendor")
+			logger.Info("vendor != updateVendor", "vendor", vendor, "updateVendor", RunInfo.UpdateVendor)
+			return errors.New("vendor != updateVendor")
 		}
 		logger.Info("No annotation driver-container-vendor found")
-		return errs.New("No driver-container-vendor found, nor vendor == updateVendor")
+		return errors.New("No driver-container-vendor found, nor vendor == updateVendor")
 	}
 
 	return nil

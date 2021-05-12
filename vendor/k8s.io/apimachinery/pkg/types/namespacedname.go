@@ -22,7 +22,7 @@ package types
 // do not get conflated in code.  For most use cases, namespace and name
 // will already have been format validated at the API entry point, so we
 // don't do that here.  Where that's not the case (e.g. in testing),
-// consider using NamespacedNameOrDie() in testing.go in this packagew.
+// consider using NamespacedNameOrDie() in testing.go in this package.
 
 type NamespacedName struct {
 	Namespace string

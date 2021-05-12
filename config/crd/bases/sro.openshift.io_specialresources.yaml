@@ -154,7 +154,9 @@ spec:
               namespace:
                 type: string
               nodeSelector:
-                type: string
+                additionalProperties:
+                  type: string
+                type: object
               set:
                 type: object
                 x-kubernetes-embedded-resource: true

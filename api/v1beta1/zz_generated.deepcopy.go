@@ -239,6 +239,13 @@ func (in *SpecialResourceSpec) DeepCopyInto(out *SpecialResourceSpec) {
 	out.Chart = in.Chart
 	in.Set.DeepCopyInto(&out.Set)
 	in.DriverContainer.DeepCopyInto(&out.DriverContainer)
+	if in.NodeSelector != nil {
+		in, out := &in.NodeSelector, &out.NodeSelector
+		*out = make(map[string]string, len(*in))
+		for key, val := range *in {
+			(*out)[key] = val
+		}
+	}
 	if in.Dependencies != nil {
 		in, out := &in.Dependencies, &out.Dependencies
 		*out = make([]helmer.HelmDependency, len(*in))

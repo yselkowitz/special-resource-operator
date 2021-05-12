@@ -2,6 +2,7 @@ package helmer
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"reflect"
 	"strings"
@@ -10,7 +11,6 @@ import (
 	"github.com/openshift-psap/special-resource-operator/pkg/color"
 	"github.com/openshift-psap/special-resource-operator/pkg/exit"
 	"github.com/openshift-psap/special-resource-operator/pkg/slice"
-	errs "github.com/pkg/errors"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/chart/loader"
@@ -65,7 +65,7 @@ func Load(ch interface{}) (*chart.Chart, error) {
 	case HelmChart:
 		curr = v
 	default:
-		exit.OnError(errs.New("Unknown Type:" + reflect.TypeOf(v).String()))
+		exit.OnError(errors.New("Unknown Type:" + reflect.TypeOf(v).String()))
 
 	}
 
@@ -74,7 +74,7 @@ func Load(ch interface{}) (*chart.Chart, error) {
 		repo = strings.Replace(curr.Repository, "file://", "", -1)
 		log.Info("DEBUG", "repo", repo)
 	} else {
-		exit.OnError(errs.New("Only file:/// currently supported"))
+		exit.OnError(errors.New("Only file:/// currently supported"))
 	}
 	loaded, err := loader.Load(repo + "/" + curr.Name + "-" + curr.Version)
 
@@ -110,7 +110,7 @@ func TemplateChart(ch chart.Chart, vals map[string]interface{}) ([]byte, error) 
 	}
 
 	if ch.Metadata.Type != "" && ch.Metadata.Type != "application" {
-		return nil, errs.New("Chart has an unsupported type and is not installable:" + ch.Metadata.Type)
+		return nil, errors.New("Chart has an unsupported type and is not installable:" + ch.Metadata.Type)
 	}
 
 	out := new(bytes.Buffer)

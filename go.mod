@@ -9,7 +9,7 @@ require (
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/jimlawless/whereami v0.0.0-20160417220522-aebf70d4a772 // indirect
 	github.com/kr/text v0.2.0 // indirect
-	github.com/mittwald/go-helm-client v0.5.0
+	github.com/mittwald/go-helm-client v0.5.0 // indirect
 	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect
 	github.com/onsi/ginkgo v1.14.1
 	github.com/onsi/gomega v1.10.2

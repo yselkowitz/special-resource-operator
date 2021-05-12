@@ -19,7 +19,8 @@ patch:
 helm-lint:
 	helm lint -f charts/global/values.yaml \
 		charts/example/*               \
-		charts/lustre/*
+		charts/lustre/*                \
+		charts/xilinx/*
 
 kube-lint: kube-linter
 	$(KUBELINTER) lint $(YAMLFILES)

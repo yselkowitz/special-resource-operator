@@ -14,7 +14,7 @@ import (
 	"github.com/openshift-psap/special-resource-operator/pkg/clients"
 	"github.com/openshift-psap/special-resource-operator/pkg/color"
 	"github.com/openshift-psap/special-resource-operator/pkg/exit"
-	errs "github.com/pkg/errors"
+	"github.com/pkg/errors"
 	v1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -120,7 +120,7 @@ func ForResource(obj *unstructured.Unstructured) error {
 	// DaemonSet NumberUnavailable == 0, etc
 	if wait, ok := waitFor[obj.GetKind()]; ok {
 		if err = wait(obj); err != nil {
-			return errs.Wrap(err, "Waiting too long for resource")
+			return errors.Wrap(err, "Waiting too long for resource")
 		}
 	}
 
@@ -187,7 +187,7 @@ func ForBuild(obj *unstructured.Unstructured) error {
 		client.InNamespace(clients.Namespace),
 	}
 	if err := clients.Interface.List(context.TODO(), builds, opts...); err != nil {
-		return errs.Wrap(err, "Could not get BuildList")
+		return errors.Wrap(err, "Could not get BuildList")
 	}
 
 	for _, build := range builds.Items {
@@ -236,7 +236,7 @@ func ForDaemonSetLogs(obj *unstructured.Unstructured, pattern string) error {
 	var selector string
 
 	if selector, found = obj.GetLabels()["app"]; !found {
-		return errs.New("Cannot find Label app=, missing take a look at the manifests")
+		return errors.New("Cannot find Label app=, missing take a look at the manifests")
 	}
 
 	log.Info("Looking for Pods with label app=" + selector)
@@ -249,7 +249,7 @@ func ForDaemonSetLogs(obj *unstructured.Unstructured, pattern string) error {
 
 	err := clients.Interface.List(context.TODO(), pods, opts...)
 	if err != nil {
-		return errs.Wrap(err, "Could not get PodList")
+		return errors.Wrap(err, "Could not get PodList")
 	}
 
 	for _, pod := range pods.Items {
@@ -258,14 +258,14 @@ func ForDaemonSetLogs(obj *unstructured.Unstructured, pattern string) error {
 		req := clients.Interface.CoreV1().Pods(pod.GetNamespace()).GetLogs(pod.GetName(), &podLogOpts)
 		podLogs, err := req.Stream(context.TODO())
 		if err != nil {
-			return errs.Wrap(err, "Error in opening stream")
+			return errors.Wrap(err, "Error in opening stream")
 		}
 		defer podLogs.Close()
 
 		buf := new(bytes.Buffer)
 		_, err = io.Copy(buf, podLogs)
 		if err != nil {
-			return errs.Wrap(err, "Error in copy information from podLogs to buf")
+			return errors.Wrap(err, "Error in copy information from podLogs to buf")
 		}
 
 		cutoff := 100
@@ -278,7 +278,7 @@ func ForDaemonSetLogs(obj *unstructured.Unstructured, pattern string) error {
 		log.Info("WaitForDaemonSetLogs", "LastBytes", lastBytes)
 
 		if match, _ := regexp.MatchString(pattern, lastBytes); !match {
-			return errs.New("Not yet done. Not matched against: " + pattern)
+			return errors.New("Not yet done. Not matched against: " + pattern)
 		}
 	}
 

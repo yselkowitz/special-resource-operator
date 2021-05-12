@@ -40,7 +40,7 @@ metadata:
   annotations:
     specialresource.openshift.io/wait: "true"
     specialresource.openshift.io/state: "driver-container"
-    specialresource.openshift.io/driver-container-vendor: simple-kmod
+    specialresource.openshift.io/driver-container-vendor: xilinx-xrt
     specialresource.openshift.io/kernel-affine: "true"
 spec:
   selector:
@@ -66,7 +66,7 @@ spec:
         lifecycle:
           preStop:
             exec:
-              command: ["/bin/sh", "-c", "systemctl stop kmods-via-containers@simple-kmod"]
+              command: ["/bin/sh", "-c", "systemctl stop kmods-via-containers@{{.Values.specialresource.metadata.name}}"]
         securityContext:
           privileged: true
       nodeSelector:

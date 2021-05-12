@@ -26,11 +26,11 @@ import (
 	"github.com/openshift-psap/special-resource-operator/pkg/filter"
 	buildv1 "github.com/openshift/api/build/v1"
 	secv1 "github.com/openshift/api/security/v1"
+	"github.com/pkg/errors"
 
 	configv1 "github.com/openshift/api/config/v1"
 	imagev1 "github.com/openshift/api/image/v1"
 
-	errs "github.com/pkg/errors"
 	"helm.sh/helm/v3/pkg/chart"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
@@ -38,7 +38,6 @@ import (
 	storagev1 "k8s.io/api/storage/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -49,8 +48,6 @@ var (
 
 // SpecialResourceReconciler reconciles a SpecialResource object
 type SpecialResourceReconciler struct {
-	client.Client
-
 	Log    logr.Logger
 	Scheme *runtime.Scheme
 
@@ -67,7 +64,7 @@ func (r *SpecialResourceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, er
 	var err error
 	var res reconcile.Result
 
-	log = r.Log.WithName(color.Print("controller", color.Brown))
+	log = r.Log.WithName(color.Print("preamble", color.Brown))
 	log.Info("Controller Request", "Name", req.Name, "Namespace", req.Namespace)
 
 	conds := conditions.NotAvailableProgressingNotDegraded(
@@ -75,20 +72,21 @@ func (r *SpecialResourceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, er
 		"Reconciling "+req.Name,
 		conditions.DegradedDefaultMsg,
 	)
+
 	// Do some preflight checks and get the cluster upgrade info
 	if res, err = SpecialResourceUpgrade(r, req); err != nil {
-		return res, errs.Wrap(err, "RECONCILE ERROR: Cannot upgrade special resource")
+		return res, errors.Wrap(err, "RECONCILE ERROR: Cannot upgrade special resource")
 	}
 	// A resource is being reconciled set status to not available and only
 	// if the reconcilation succeeds we're updating the conditions
 	if res, err = SpecialResourcesStatus(r, req, conds); err != nil {
-		return res, errs.Wrap(err, "RECONCILE ERROR: Cannot update special resource status")
+		return res, errors.Wrap(err, "RECONCILE ERROR: Cannot update special resource status")
 	}
 	// Reconcile all specialresources
 	if res, err = SpecialResourcesReconcile(r, req); err == nil && !res.Requeue {
 		conds = conditions.AvailableNotProgressingNotDegraded()
 	} else {
-		return res, errs.Wrap(err, "RECONCILE ERROR: Cannot reconcile special resource")
+		return res, errors.Wrap(err, "RECONCILE ERROR: Cannot reconcile special resource")
 	}
 
 	// Only if we're successfull we're going to update the status to

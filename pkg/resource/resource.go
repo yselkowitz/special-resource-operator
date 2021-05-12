@@ -1,8 +1,10 @@
 package resource
 
 import (
+	"strings"
+
 	"github.com/openshift-psap/special-resource-operator/pkg/exit"
-	errs "github.com/pkg/errors"
+	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
@@ -52,7 +54,7 @@ func UpdateResourceVersion(req *unstructured.Unstructured, found *unstructured.U
 		exit.OnErrorOrNotFound(fnd, err)
 
 		if err := unstructured.SetNestedField(req.Object, version, "metadata", "resourceVersion"); err != nil {
-			return errs.Wrap(err, "Couldn't update ResourceVersion")
+			return errors.Wrap(err, "Couldn't update ResourceVersion")
 		}
 
 	}
@@ -61,9 +63,50 @@ func UpdateResourceVersion(req *unstructured.Unstructured, found *unstructured.U
 		exit.OnErrorOrNotFound(fnd, err)
 
 		if err := unstructured.SetNestedField(req.Object, clusterIP, "spec", "clusterIP"); err != nil {
-			return errs.Wrap(err, "Couldn't update clusterIP")
+			return errors.Wrap(err, "Couldn't update clusterIP")
 		}
 		return nil
 	}
+	return nil
+}
+
+func SetNodeSelectorTerms(obj *unstructured.Unstructured, terms map[string]string) error {
+
+	if strings.Compare(obj.GetKind(), "DaemonSet") == 0 {
+		if err := nodeSelectorTerms(terms, obj, "spec", "template", "spec", "nodeSelector"); err != nil {
+			return errors.Wrap(err, "Cannot setup DaemonSet kernel version affinity")
+		}
+	}
+	if strings.Compare(obj.GetKind(), "Pod") == 0 {
+		if err := nodeSelectorTerms(terms, obj, "spec", "nodeSelector"); err != nil {
+			return errors.Wrap(err, "Cannot setup Pod kernel version affinity")
+		}
+	}
+	if strings.Compare(obj.GetKind(), "BuildConfig") == 0 {
+		if err := nodeSelectorTerms(terms, obj, "spec", "nodeSelector"); err != nil {
+			return errors.Wrap(err, "Cannot setup BuildConfig kernel version affinity")
+		}
+	}
+
+	return nil
+}
+
+func nodeSelectorTerms(terms map[string]string, obj *unstructured.Unstructured, fields ...string) error {
+
+	nodeSelector, found, err := unstructured.NestedMap(obj.Object, fields...)
+	exit.OnError(err)
+
+	if !found {
+		nodeSelector = make(map[string]interface{})
+	}
+
+	for k, v := range terms {
+		nodeSelector[k] = v
+	}
+
+	if err := unstructured.SetNestedMap(obj.Object, nodeSelector, fields...); err != nil {
+		return errors.Wrap(err, "Cannot update nodeSelector for: "+obj.GetName())
+	}
+
 	return nil
 }

@@ -1,27 +1,31 @@
 apiVersion: sro.openshift.io/v1beta1
 kind: SpecialResource
 metadata:
-  name: inaccel-fgpa-xrt-driver
+  name: fpga-xrt-driver
 spec:
   chart:
     name: fpga-xrt-driver
-    repository: file://charts/inaccel
+    repository: file:///charts/xilinx
     version: 0.1.0
-  namespace: inaccel-fpga-xrt-driver
-  nodeSelector: ""
+  namespace: fpga-xrt-driver
+  nodeSelector:
+    feature.node.kubernetes.io/pci-1d0f.present: "true"
+    node.kubernetes.io/instance-type: f1.2xlarge
+
   set:
     kind: Values
     apiVersion: sro.openshift.io/v1beta1
-    coral:
-      image: inaccel/coral
-      pullPolicy: Always
-      # resources: ...
-      # tag: ...
-    # license: ...
-    monitor:
-      image: inaccel/monitor
-      # port: ...
-      # pullPolicy: ...
-      # resources: ...
-      tag: latest
-    # nodeSelector: ...
+
+
+  driverContainer:
+    source:
+      git:
+        ref: "main"
+        uri: "https://github.com/openshift-psap/kvc-xilinx-xrt.git"
+
+  dependencies:
+  - name: driver-container-base
+    version: "0.1.0"
+    repository: "file:///charts/example"
+    tags:
+    - image-puller

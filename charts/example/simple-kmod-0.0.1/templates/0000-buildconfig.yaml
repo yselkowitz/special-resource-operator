@@ -14,7 +14,7 @@ metadata:
   name: {{.Values.specialresource.metadata.name}}-{{.Values.groupName.driverBuild}}
   annotations:
     specialresource.openshift.io/wait: "true"
-    specialresource.openshift.io/driver-container-vendor: simple-kmod
+    specialresource.openshift.io/driver-container-vendor: xilinx-xrt
 spec:
   nodeSelector:
     node-role.kubernetes.io/worker: ""
