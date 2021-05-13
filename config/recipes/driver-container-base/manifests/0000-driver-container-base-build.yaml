@@ -9,6 +9,33 @@ spec: {}
 apiVersion: v1
 kind: ConfigMap
 metadata:
+  name: {{.SpecialResource.Name}}-beta-repo
+data:
+  dci-rpm-mirrors.repo: |-
+    [rhel-8-beta-baseos-rpms]
+    name = Red Hat Enterprise Linux 8 Beta BaseOS (RPMs)
+    baseurl = https://mirror.openshift.com/enterprise/reposync/ci-deps/rhel-8-beta-baseos-rpms/
+    failovermethod = priority
+    gpgcheck = 0
+    sslclientcert = /usr/local/etc/rhsm-host/ca/custom-repo-ca.pem
+    sslclientkey = /usr/local/etc/rhsm-host/ca/custom-repo-ca.pem
+    sslverify = 0
+    enabled = 1
+
+    [rhel-8-beta-appstream-rpms]
+    name = Red Hat Enterprise Linux 8 Beta AppStream (RPMs)
+    baseurl = https://mirror.openshift.com/enterprise/reposync/ci-deps/rhel-8-beta-appstream-rpms/
+    failovermethod = priority
+    gpgcheck = 0
+    sslclientcert = /usr/local/etc/rhsm-host/ca/custom-repo-ca.pem
+    sslclientkey = /usr/local/etc/rhsm-host/ca/custom-repo-ca.pem
+    sslverify = 0
+    enabled = 1
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
   name: {{.SpecialResource.Name}}-buildah-helper
 data:
   buildah-helper.sh: |-
@@ -28,7 +55,7 @@ data:
 
     ENV() { buildah --storage-driver vfs config --env $@ $CNT; }
     RUN() { buildah --storage-driver vfs --isolation chroot run --user 0 $CNT -- $@; }
-    RUNV() { buildah --storage-driver vfs --isolation chroot run --volume /etc/pki/entitlement-host:/etc/pki/entitlement:z --volume ${MOCMNT}:/extensions:z --user 0 $CNT -- $@; }
+    RUNV() { buildah --storage-driver vfs --isolation chroot run --volume /etc/rhsm-host/ca:/usr/local/etc/rhsm-host/ca:z --volume ${MOCMNT}:/extensions:z --user 0 $CNT -- $@; }
     COPY() { buildah --storage-driver vfs copy $CNT $@; }
     COMMIT() { buildah --storage-driver vfs commit $CNT $1; }
     ENTRYPOINT() { buildah config --entrypoint $1 $CNT; }
@@ -94,9 +121,10 @@ data:
     echo "Setting install_weak_deps=False globally for yum..."
     yum config-manager --setopt=install_weak_deps=False --save
 
-    echo "Enabling RHOCP and EUS RPM repos..."
-    enable_repo rhocp-${CLUSTER_VERSION}-for-rhel-8-x86_64-rpms
-    enable_repo rhel-8-for-x86_64-baseos-eus-rpms || true
+    #echo "Enabling RHOCP and EUS RPM repos..."
+    #enable_repo rhocp-${CLUSTER_VERSION}-for-rhel-8-x86_64-rpms
+    #enable_repo rhel-8-for-x86_64-baseos-eus-rpms || true
+
     # PLACEHOLDER FOR RT KERNEL -- enable_repo rhel-8-for-x86_64-nfv-rpms
 
     # First update the base container to latest versions of everything
@@ -172,6 +200,9 @@ data:
     ENV KERNEL_VERSION=${KERNEL_VERSION}
     ENV RHEL_VERSION=${RHEL_VERSION}
     ENV CLUSTER_VERSION=${CLUSTER_VERSION}
+
+    ### changes for 8.4 beta repos
+    COPY /usr/local/rhel-beta/dci-rpm-mirrors.repo /etc/yum.repos.d/dci-rpm-mirrors.repo
 
     COPY /bin/${SCRIPT_NAME} .
     RUNV bash -c $(pwd)/${SCRIPT_NAME}
@@ -272,6 +303,9 @@ spec:
         - name: authfile
           mountPath: /var/lib/kubelet
           readOnly: true
+        - name: beta-repo
+          mountPath: /usr/local/rhel-beta
+          readOnly: true
         - name: dockercfg
           mountPath: /root
           readOnly: true
@@ -279,7 +313,7 @@ spec:
       exec:
         command: [sh, -c, 'ls /tmp/ready']
       initialDelaySeconds: 10
-      failureThreshold: 60
+      failureThreshold: 90
       successThreshold: 1
       periodSeconds: 5
   volumes:
@@ -301,3 +335,7 @@ spec:
       configMap:
         defaultMode: 0700
         name: {{.SpecialResource.Name}}-buildah-helper
+    - name: beta-repo
+      configMap:
+        defaultMode: 0644
+        name: {{.SpecialResource.Name}}-beta-repo
