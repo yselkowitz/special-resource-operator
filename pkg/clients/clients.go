@@ -8,6 +8,7 @@ import (
 	clientconfigv1 "github.com/openshift/client-go/config/clientset/versioned/typed/config/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
@@ -27,6 +28,7 @@ type ClientsInterface struct {
 	client.Client
 	kubernetes.Clientset
 	clientconfigv1.ConfigV1Client
+	record.EventRecorder
 }
 
 func init() {

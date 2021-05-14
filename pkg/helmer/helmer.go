@@ -2,10 +2,12 @@ package helmer
 
 import (
 	"bytes"
-	"errors"
+
 	"fmt"
-	"reflect"
 	"strings"
+	"time"
+
+	"github.com/pkg/errors"
 
 	"github.com/go-logr/logr"
 	"github.com/openshift-psap/special-resource-operator/pkg/color"
@@ -14,34 +16,90 @@ import (
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/chart/loader"
+	"helm.sh/helm/v3/pkg/cli"
+	"helm.sh/helm/v3/pkg/getter"
 	"helm.sh/helm/v3/pkg/releaseutil"
+	"helm.sh/helm/v3/pkg/repo"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
 
 var (
-	log logr.Logger
+	log      logr.Logger
+	settings *cli.EnvSettings
+	// http, oci, and patched for file:////
+	getterProviders getter.Providers
+	storage         = repo.File{
+		APIVersion:   "",
+		Generated:    time.Time{},
+		Repositories: []*repo.Entry{},
+	}
 )
 
 func init() {
 	log = zap.New(zap.UseDevMode(true)).WithName(color.Print("helm", color.Blue))
 	err := OpenShiftInstallOrder()
+
+	settings = cli.New()
+
+	// cli.EnvSettings{
+	//	KubeConfig:       "",
+	//	KubeContext:      "",
+	//	KubeToken:        "",
+	//	KubeAsUser:       "",
+	//	KubeAsGroups:     []string{},
+	//	KubeAPIServer:    "",
+	//	KubeCaFile:       "",
+	//	Debug:            false,
+	//	RegistryConfig:   "",
+	//	RepositoryConfig: "",
+	//	RepositoryCache:  "",
+	//	PluginsDirectory: "",
+	//	MaxHistory:       0,
+	// }
+
+	settings.RepositoryConfig = "/tmp/helm/repositories.yaml"
+	settings.RepositoryCache = "/tmp/helm/cache"
+	settings.Debug = true
+
+	getterProviders = getter.All(settings)
+
 	exit.OnError(err)
 }
 
-type HelmChart struct {
-	Name       string `json:"name"`
-	Version    string `json:"version"`
-	Repository string `json:"repository"`
+type HelmRepo struct {
+	// +kubebuilder:validation:Required
+	Name string `json:"name"`
+	// +kubebuilder:validation:Required
+	URL string `json:"url"`
+	// +kubebuilder:validation:Optional
+	Username string `json:"username"`
+	// +kubebuilder:validation:Optional
+	Password string `json:"password"`
+	// +kubebuilder:validation:Optional
+	CertFile string `json:"certFile"`
+	// +kubebuilder:validation:Optional
+	KeyFile string `json:"keyFile"`
+	// +kubebuilder:validation:Optional
+	CAFile string `json:"caFile"`
+	// +kubebuilder:default:=false
+	InsecureSkipTLSverify bool `json:"insecure_skip_tls_verify"`
 }
-
-type HelmDependency struct {
+type HelmChartObosolete struct {
 	Name       string   `json:"name"`
 	Version    string   `json:"version"`
-	Repository string   `json:"repository"`
-	Tags       []string `json:"tags"`
+	Repository HelmRepo `json:"repository"`
 }
 
-func (in *HelmDependency) DeepCopyInto(out *HelmDependency) {
+type HelmChart struct {
+	Name    string `json:"name"`
+	Version string `json:"version"`
+	// +kubebuilder:validation:Required
+	Repository HelmRepo `json:"repository"`
+	// +kubebuilder:validation:Optional
+	Tags []string `json:"tags"`
+}
+
+func (in *HelmChart) DeepCopyInto(out *HelmChart) {
 	out.Name = in.Name
 	out.Version = in.Version
 	out.Repository = in.Repository
@@ -49,34 +107,71 @@ func (in *HelmDependency) DeepCopyInto(out *HelmDependency) {
 	copy(out.Tags, in.Tags)
 }
 
-func Load(ch interface{}) (*chart.Chart, error) {
+func AddorUpdateRepo(entry *repo.Entry) error {
 
-	var curr HelmChart
-
-	switch v := ch.(type) {
-	case *chart.Dependency:
-		curr.Name = v.Name
-		curr.Version = v.Version
-		curr.Repository = v.Repository
-	case chart.Dependency:
-		curr.Name = v.Name
-		curr.Version = v.Version
-		curr.Repository = v.Repository
-	case HelmChart:
-		curr = v
-	default:
-		exit.OnError(errors.New("Unknown Type:" + reflect.TypeOf(v).String()))
+	chartRepo, err := repo.NewChartRepository(entry, getterProviders)
+	if err != nil {
+		return errors.Wrap(err, "new chart repository failed")
 
 	}
+	chartRepo.CachePath = settings.RepositoryCache
 
-	var repo string
-	if strings.Contains(curr.Repository, "file:///") {
-		repo = strings.Replace(curr.Repository, "file://", "", -1)
-		log.Info("DEBUG", "repo", repo)
-	} else {
-		exit.OnError(errors.New("Only file:/// currently supported"))
+	if _, err = chartRepo.DownloadIndexFile(); err != nil {
+		return errors.Wrap(err, "cannot find index.yaml for: "+entry.URL)
 	}
-	loaded, err := loader.Load(repo + "/" + curr.Name + "-" + curr.Version)
+
+	if storage.Has(entry.Name) {
+		return nil
+	}
+
+	storage.Update(entry)
+
+	if err = storage.WriteFile(settings.RepositoryConfig, 0644); err != nil {
+		return errors.Wrap(err, "could not wirte repository config:"+settings.RepositoryConfig)
+	}
+
+	return nil
+}
+
+func Load(spec HelmChart) (*chart.Chart, error) {
+
+	entry := &repo.Entry{
+		Name:                  spec.Repository.Name,
+		URL:                   spec.Repository.URL,
+		Username:              spec.Repository.Username,
+		Password:              spec.Repository.Password,
+		CertFile:              spec.Repository.CertFile,
+		KeyFile:               spec.Repository.KeyFile,
+		CAFile:                spec.Repository.CAFile,
+		InsecureSkipTLSverify: spec.Repository.InsecureSkipTLSverify,
+	}
+
+	err := AddorUpdateRepo(entry)
+	exit.OnError(err)
+
+	act := action.ChartPathOptions{
+		CaFile:                "",
+		CertFile:              "",
+		KeyFile:               "",
+		InsecureSkipTLSverify: entry.InsecureSkipTLSverify,
+		Keyring:               "",
+		Password:              "",
+		RepoURL:               "",
+		Username:              "",
+		Verify:                false,
+		Version:               "",
+	}
+	act.Verify = false
+
+	repoChartName := entry.Name + "/" + spec.Name
+	log.Info("Locating", "chart", repoChartName)
+
+	var path string
+	if path, err = act.LocateChart(repoChartName, settings); err != nil {
+		errors.Wrap(err, "Could not locate chart: "+repoChartName)
+	}
+
+	loaded, err := loader.Load(path)
 
 	return loaded, err
 

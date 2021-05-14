@@ -24,6 +24,7 @@ import (
 	"github.com/openshift-psap/special-resource-operator/pkg/color"
 	"github.com/openshift-psap/special-resource-operator/pkg/conditions"
 	"github.com/openshift-psap/special-resource-operator/pkg/filter"
+	"github.com/openshift-psap/special-resource-operator/pkg/helmer"
 	buildv1 "github.com/openshift/api/build/v1"
 	secv1 "github.com/openshift/api/security/v1"
 	"github.com/pkg/errors"
@@ -54,7 +55,7 @@ type SpecialResourceReconciler struct {
 	specialresource srov1beta1.SpecialResource
 	parent          srov1beta1.SpecialResource
 	chart           chart.Chart
-	dependency      chart.Dependency
+	dependency      helmer.HelmChart
 	clusterOperator configv1.ClusterOperator
 }
 

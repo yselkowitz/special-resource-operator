@@ -17,12 +17,10 @@ sources:
 type: application
 version: 1.2.1
 
-dependencies:
-- name: fpga-xrt-driver
-  version: "0.1.0"
-  repository: "file:///charts/inaccel"
-  tags:
-  - image-puller
+  #dependencies:
+  #- name: fpga-xrt-driver
+  # version: "0.1.0"
+  #repository: "file:///charts/inaccel"
+  #tags:
+  #- image-puller
 
-annotations:
-  specialresource.openshift.io/image-reference: "true"

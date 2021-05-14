@@ -39,7 +39,33 @@ spec:
                   name:
                     type: string
                   repository:
-                    type: string
+                    properties:
+                      caFile:
+                        type: string
+                      certFile:
+                        type: string
+                      insecure_skip_tls_verify:
+                        default: false
+                        type: boolean
+                      keyFile:
+                        type: string
+                      name:
+                        type: string
+                      password:
+                        type: string
+                      url:
+                        type: string
+                      username:
+                        type: string
+                    required:
+                    - insecure_skip_tls_verify
+                    - name
+                    - url
+                    type: object
+                  tags:
+                    items:
+                      type: string
+                    type: array
                   version:
                     type: string
                 required:
@@ -53,7 +79,29 @@ spec:
                     name:
                       type: string
                     repository:
-                      type: string
+                      properties:
+                        caFile:
+                          type: string
+                        certFile:
+                          type: string
+                        insecure_skip_tls_verify:
+                          default: false
+                          type: boolean
+                        keyFile:
+                          type: string
+                        name:
+                          type: string
+                        password:
+                          type: string
+                        url:
+                          type: string
+                        username:
+                          type: string
+                      required:
+                      - insecure_skip_tls_verify
+                      - name
+                      - url
+                      type: object
                     tags:
                       items:
                         type: string
@@ -63,7 +111,6 @@ spec:
                   required:
                   - name
                   - repository
-                  - tags
                   - version
                   type: object
                 type: array

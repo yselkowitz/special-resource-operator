@@ -8,8 +8,6 @@ import (
 	"github.com/openshift-psap/special-resource-operator/pkg/clients"
 	"github.com/openshift-psap/special-resource-operator/pkg/color"
 	"github.com/openshift-psap/special-resource-operator/pkg/exit"
-	"github.com/openshift-psap/special-resource-operator/pkg/helmer"
-	"helm.sh/helm/v3/pkg/chart"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
@@ -81,26 +79,4 @@ func UpdateConfigMap(parent string, child string) {
 
 	err = clients.Interface.Update(context.TODO(), cm)
 	exit.OnError(err)
-}
-
-func CheckOverride(chartDeps []*chart.Dependency, crDeps []helmer.HelmDependency) []*chart.Dependency {
-
-	// If there are no overrides in the CR just ignore
-	// and use the Chart.yaml depdendencies
-	if len(crDeps) == 0 {
-		log.Info("No overrides using Chart.yaml dependencies")
-		return chartDeps
-	}
-
-	var override []*chart.Dependency
-
-	for _, dep := range crDeps {
-		override = append(override, &chart.Dependency{
-			Name:       dep.Name,
-			Version:    dep.Version,
-			Repository: dep.Repository,
-		})
-
-	}
-	return override
 }

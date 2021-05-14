@@ -7,7 +7,12 @@ spec:
   chart:
     name: simple-kmod
     version: 0.0.1
-    repository: file:///charts/example
+    repository:
+      name: example
+      repository: file:///charts/example
+  repo:
+    name: example
+    url: file:///charts/example
   set:
     kind: Values
     apiVersion: sro.openshift.io/v1beta1

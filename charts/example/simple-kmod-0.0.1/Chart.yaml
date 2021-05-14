@@ -28,9 +28,9 @@ appVersion: 1.0.0
 #annotations:
 #  appVersion: >= 1.13.0 < 1.15.0
 
-dependencies:
-- name: driver-container-base
-  version: "0.1.0"
-  repository: "file:///charts/example"
-  tags:
-  - image-puller
+  #dependencies:
+  #- name: driver-container-base
+  #version: "0.1.0"
+  #repository: "file:///charts/example"
+  #tags:
+  #- image-puller

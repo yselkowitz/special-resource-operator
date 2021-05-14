@@ -74,6 +74,7 @@ func main() {
 		Client:         mgr.GetClient(),
 		Clientset:      clients.GetKubeClientSetOrDie(),
 		ConfigV1Client: clients.GetConfigClientOrDie(),
+		EventRecorder:  mgr.GetEventRecorderFor("specialresource"),
 	}
 
 	if err = (&controllers.SpecialResourceReconciler{

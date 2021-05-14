@@ -5,7 +5,9 @@ metadata:
 spec:
   chart:
     name: fpga-xrt-driver
-    repository: file:///charts/xilinx
+    repository:
+      name: example
+      url: file:///charts/xilinx
     version: 0.1.0
   namespace: fpga-xrt-driver
   nodeSelector:
@@ -26,6 +28,8 @@ spec:
   dependencies:
   - name: driver-container-base
     version: "0.1.0"
-    repository: "file:///charts/example"
+    repository:
+      name: example
+      url: "file:///charts/example"
     tags:
     - image-puller

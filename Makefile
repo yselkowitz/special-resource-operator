@@ -8,6 +8,7 @@ YAMLFILES        ?= $(shell  find manifests-gen config/recipes -name "*.yaml"  -
 
 export PATH := go/bin:$(PATH)
 include Makefile.specialresource.mk
+include Makefile.helm.mk
 include Makefile.helper.mk
 
 
@@ -15,12 +16,6 @@ patch:
 	git diff vendor/github.com/go-logr/zapr/zapr.go > /tmp/zapr.patch
 	git apply /tmp/zapr.patch
 
-
-helm-lint:
-	helm lint -f charts/global/values.yaml \
-		charts/example/*               \
-		charts/lustre/*                \
-		charts/xilinx/*
 
 kube-lint: kube-linter
 	$(KUBELINTER) lint $(YAMLFILES)
@@ -129,7 +124,7 @@ generate: controller-gen
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
 # Build the docker image
-local-image-build: helm-lint test generate manifests-gen
+local-image-build: helm-lint helm-repo-index test generate manifests-gen
 	podman build -f Dockerfile.ubi8 --no-cache . -t $(IMAGE)
 
 # Push the docker image

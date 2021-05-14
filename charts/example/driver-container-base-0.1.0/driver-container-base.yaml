@@ -6,7 +6,9 @@ spec:
   chart:
     name: driver-container-base
     version: 0.1.0
-    repository: file:///charts/example
+    repository:
+      name: example
+      url: file:///charts/example
   namespace: driver-container-base
   driverContainer:
     source:

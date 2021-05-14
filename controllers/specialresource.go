@@ -127,19 +127,11 @@ func SpecialResourcesReconcile(r *SpecialResourceReconciler, req ctrl.Request) (
 	pchart, err := helmer.Load(r.parent.Spec.Chart)
 	exit.OnError(err)
 
-	// The CR will override the dependency if they are stated in the
-	// CR and in the Chart.yaml
-	chartDependencies := dependencies.CheckOverride(
-		pchart.Metadata.Dependencies,
-		r.parent.Spec.Dependencies)
-
 	// Only one level dependency support for now
-	for _, dependency := range chartDependencies {
+	for _, r.dependency = range r.parent.Spec.Dependencies {
 
-		log = r.Log.WithName(color.Print(dependency.Name, color.Purple))
+		log = r.Log.WithName(color.Print(r.dependency.Name, color.Purple))
 		log.Info("Getting Dependency")
-
-		r.dependency = *dependency
 
 		cchart, err := helmer.Load(r.dependency)
 		exit.OnError(err)
