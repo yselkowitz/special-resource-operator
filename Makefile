@@ -109,7 +109,7 @@ manifests-gen: controller-gen
 manifests: manifests-gen kustomize configure
 	cd $@; $(KUSTOMIZE) build ../config/namespace | $(CSPLIT)
 	cd $@; bash ../scripts/rename.sh
-	cd $@; $(KUSTOMIZE) build ../config/cr > 0015_specialresource_special-resource-preamble.yaml
+	cd $@; $(KUSTOMIZE) build ../config/cr > 0016_specialresource_special-resource-preamble.yaml
 
 # Run go fmt against code
 fmt:
