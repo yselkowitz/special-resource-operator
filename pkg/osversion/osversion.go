@@ -20,7 +20,7 @@ func RenderOperatingSystem(rel string, maj string, min string) (string, string, 
 		case min <= "7":
 			rhelMin = "3"
 		case min <= "8":
-			rhelMin = "3"
+			rhelMin = "4"
 		}
 		return "rhel" + rhelMaj, "rhel" + rhelMaj + "." + rhelMin, rhelMaj + "." + rhelMin, nil
 	}
