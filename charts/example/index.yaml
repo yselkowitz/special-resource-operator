@@ -1,0 +1,41 @@
+apiVersion: v1
+entries:
+  driver-container-base:
+  - annotations:
+      appVersion: '>= 1.13.0 < 1.15.0'
+    apiVersion: v2
+    appVersion: 1.0.0
+    created: "2021-05-14T12:29:51.040426176Z"
+    description: Driver Container Base is the base image for out-of-tree builds
+    digest: 772284b545cc3ec6e58a1092aa9db5e4204d9f24c81072f317004aacffd2f121
+    icon: https://avatars.githubusercontent.com/u/55542927
+    name: driver-container-base
+    type: application
+    urls:
+    - file:///charts/example/driver-container-base-0.1.0.tgz
+    version: 0.1.0
+  ping-pong:
+  - apiVersion: v2
+    appVersion: 1.0.0
+    created: "2021-05-14T12:29:51.040645491Z"
+    description: Simple go app to showcase cert-manager intergration
+    digest: d5229059af0a0ca95047e7ce6d1ffdbe964e1178ed8156ac9da9368ef5784d31
+    icon: https://avatars.githubusercontent.com/u/55542927
+    name: ping-pong
+    type: application
+    urls:
+    - file:///charts/example/ping-pong-0.0.1.tgz
+    version: 0.0.1
+  simple-kmod:
+  - apiVersion: v2
+    appVersion: 1.0.0
+    created: "2021-05-14T12:29:51.040796904Z"
+    description: Simple kmod will deploy a simple kmod driver-container
+    digest: 59db817c60ce0d91c0581c7c8921b1ae997a04abbd98a36c1cfb30420735dd0a
+    icon: https://avatars.githubusercontent.com/u/55542927
+    name: simple-kmod
+    type: application
+    urls:
+    - file:///charts/example/simple-kmod-0.0.1.tgz
+    version: 0.0.1
+generated: "2021-05-14T12:29:51.040083998Z"
