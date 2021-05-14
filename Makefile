@@ -4,7 +4,7 @@ PULLPOLICY       ?= IfNotPresent
 TAG              ?= $(shell git branch --show-current)
 IMAGE            ?= quay.io/openshift-psap/special-resource-operator:$(TAG)
 CSPLIT           ?= csplit - --prefix="" --suppress-matched --suffix-format="%04d.yaml"  /---/ '{*}' --silent
-YAMLFILES        ?= $(shell  find manifests-gen config/recipes -name "*.yaml"  -not \( -path "config/recipes/lustre-client/*" -prune \) )
+YAMLFILES        ?= $(shell  find manifests-gen charts -name "*.yaml"  -not \( -path "charts/lustre/lustre-aws-fsx-0.0.1/csi-driver/*" -prune \) )
 
 export PATH := go/bin:$(PATH)
 include Makefile.specialresource.mk
