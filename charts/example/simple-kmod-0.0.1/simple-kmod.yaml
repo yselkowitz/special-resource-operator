@@ -9,7 +9,7 @@ spec:
     version: 0.0.1
     repository:
       name: example
-      repository: file:///charts/example
+      url: file:///charts/example
   repo:
     name: example
     url: file:///charts/example
