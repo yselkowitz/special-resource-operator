@@ -6,6 +6,7 @@ require (
 	cloud.google.com/go v0.58.0 // indirect
 	github.com/go-logr/logr v0.2.1
 	github.com/google/go-cmp v0.5.2 // indirect
+	github.com/google/go-containerregistry v0.5.1
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/jimlawless/whereami v0.0.0-20160417220522-aebf70d4a772 // indirect
 	github.com/kr/text v0.2.0 // indirect

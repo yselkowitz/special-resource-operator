@@ -40,7 +40,7 @@ func labelNodesAccordingToState(obj *unstructured.Unstructured, r *SpecialResour
 
 		err := clients.Interface.Update(context.TODO(), updated)
 		if apierrors.IsForbidden(err) {
-			return fmt.Errorf("forbidden check Role, ClusterRole and Bindings for operator %s", err)
+			return errors.Wrap(err, "forbidden check Role, ClusterRole and Bindings for operator %s")
 		}
 		if apierrors.IsConflict(err) {
 			var err error

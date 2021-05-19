@@ -3,8 +3,21 @@ package upgrade
 import (
 	"errors"
 
+	"github.com/go-logr/logr"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/openshift-psap/special-resource-operator/pkg/cache"
+	"github.com/openshift-psap/special-resource-operator/pkg/color"
+	"github.com/openshift-psap/special-resource-operator/pkg/registry"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
+
+var (
+	log logr.Logger
+)
+
+func init() {
+	log = zap.New(zap.UseDevMode(true)).WithName(color.Print("upgrade", color.Blue))
+}
 
 type NodeVersion struct {
 	OSVersion      string
@@ -46,4 +59,25 @@ func NodeVersionInfo() (map[string]NodeVersion, error) {
 	}
 
 	return info, nil
+}
+
+func DriverToolkit(entries []string) error {
+
+	for _, entry := range entries {
+
+		log.Info("History", "entry", entry)
+		var layer v1.Layer
+		if layer = registry.LastLayer(entry); layer == nil {
+			continue
+		}
+		version, imageURL := registry.ReleaseManifests("driver-toolkit", layer)
+
+		if version != "" {
+			log.Info("version", "V", version)
+			log.Info("imageURL", "V", imageURL)
+		}
+
+	}
+
+	return nil
 }

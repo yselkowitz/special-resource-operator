@@ -13,9 +13,8 @@ include Makefile.helper.mk
 
 
 patch:
-	git diff vendor/github.com/go-logr/zapr/zapr.go > /tmp/zapr.patch
-	git apply /tmp/zapr.patch
-
+	cp .patches/options.patch.go vendor/github.com/google/go-containerregistry/pkg/crane/.
+	cp .patches/getter.patch.go vendor/helm.sh/helm/v3/pkg/getter/.
 
 kube-lint: kube-linter
 	$(KUBELINTER) lint $(YAMLFILES)
@@ -71,7 +70,7 @@ test: # generate fmt vet manifests-gen
 	go test ./... -coverprofile cover.out
 
 # Build manager binary
-manager: generate fmt vet
+manager: patch generate fmt vet
 	go build -mod=vendor -o /tmp/bin/manager main.go
 
 # Run against the configured Kubernetes cluster in ~/.kube/config
@@ -87,7 +86,7 @@ configure:
 
 
 # Deploy controller in the configured Kubernetes cluster in ~/.kube/config
-deploy: manifests
+deploy: patch manifests
 	$(KUSTOMIZE) build config/namespace | kubectl apply -f -
 	$(shell sleep 5)
 	$(KUSTOMIZE) build config/cr | kubectl apply -f -

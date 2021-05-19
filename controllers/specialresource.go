@@ -118,7 +118,7 @@ func SpecialResourcesReconcile(r *SpecialResourceReconciler, req ctrl.Request) (
 	log = r.Log.WithName(color.Print(r.parent.Name, color.Green))
 
 	if r.parent.Name == "special-resource-preamble" {
-		log.Info("Preamble done, waiting for driver-container requests")
+		log.Info("Preamble done, waiting for specialresource requests")
 		return reconcile.Result{}, nil
 	}
 

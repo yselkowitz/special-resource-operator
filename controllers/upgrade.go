@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"github.com/openshift-psap/special-resource-operator/pkg/cache"
+	"github.com/openshift-psap/special-resource-operator/pkg/cluster"
 	"github.com/openshift-psap/special-resource-operator/pkg/color"
 	"github.com/openshift-psap/special-resource-operator/pkg/exit"
 	"github.com/openshift-psap/special-resource-operator/pkg/upgrade"
@@ -14,7 +15,7 @@ func SpecialResourceUpgrade(r *SpecialResourceReconciler, req ctrl.Request) (ctr
 
 	var err error
 
-	log = r.Log.WithName(color.Print("upgrade", color.Red))
+	log = r.Log.WithName(color.Print("upgrade", color.Blue))
 
 	err = cache.Nodes(r.specialresource.Spec.NodeSelector, false)
 	exit.OnError(errors.Wrap(err, "Failed to cache nodes"))
@@ -23,6 +24,11 @@ func SpecialResourceUpgrade(r *SpecialResourceReconciler, req ctrl.Request) (ctr
 	exit.OnError(errors.Wrap(err, "Failed to get upgrade info"))
 
 	log.Info("TODO: preflight checks")
+
+	history, err := cluster.VersionHistory()
+	exit.OnError(errors.Wrap(err, "Could not get version history"))
+
+	upgrade.DriverToolkit(history)
 
 	return ctrl.Result{Requeue: false}, nil
 }

@@ -3,8 +3,14 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"strings"
 
+	"github.com/openshift-psap/special-resource-operator/pkg/cache"
 	"github.com/openshift-psap/special-resource-operator/pkg/clients"
+	"github.com/openshift-psap/special-resource-operator/pkg/state"
+	"github.com/openshift-psap/special-resource-operator/pkg/warn"
+	"github.com/pkg/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
@@ -28,11 +34,50 @@ func reconcileFinalizers(r *SpecialResourceReconciler) error {
 	return nil
 }
 
+func finalizeNodes(r *SpecialResourceReconciler, remove string) error {
+	for _, node := range cache.Node.List.Items {
+		labels := node.GetLabels()
+		update := make(map[string]string)
+		// Remove all specialresource labels
+		for k, v := range labels {
+			if strings.Contains(k, remove) {
+				continue
+			}
+			update[k] = v
+		}
+
+		node.SetLabels(update)
+		err := clients.Interface.Update(context.TODO(), &node)
+		if apierrors.IsForbidden(err) {
+			return errors.Wrap(err, "forbidden check Role, ClusterRole and Bindings for operator %s")
+		}
+		if apierrors.IsConflict(err) {
+			var err error
+
+			if err = cache.Nodes(r.specialresource.Spec.NodeSelector, true); err != nil {
+				return errors.Wrap(err, "Could not cache nodes for api conflict")
+			}
+
+			return fmt.Errorf("node Conflict Label %s err %s", state.CurrentName, err)
+		}
+
+	}
+	return nil
+}
+
 func finalizeSpecialResource(r *SpecialResourceReconciler) error {
 	// TODO(user): Add the cleanup steps that the operator
 	// needs to do before the CR can be deleted. Examples
 	// of finalizers include performing backups and deleting
 	// resources that are not owned by this CR, like a PVC.
+
+	// If this special resources is deleted we're going to remove all
+	// specialresource labels from the nodes.
+	if r.specialresource.Name == "special-resource-preamble" {
+		finalizeNodes(r, "specialresource.openshift.io")
+	}
+	err := finalizeNodes(r, "specialresource.openshift.io/state-"+r.specialresource.Name)
+	warn.OnError(err)
 
 	log.Info("Successfully finalized", "SpecialResource:", r.specialresource.Name)
 	return nil

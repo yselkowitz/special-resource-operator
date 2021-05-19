@@ -42,6 +42,25 @@ func Version() (string, string, error) {
 	return "", "", errors.New("Undefined Cluster Version")
 }
 
+func VersionHistory() ([]string, error) {
+
+	stat := []string{}
+	version, err := clients.Interface.ClusterVersions().Get(context.TODO(), "version", metav1.GetOptions{})
+	if err != nil {
+		return stat, errors.Wrap(err, "ConfigClient unable to get ClusterVersions")
+	}
+
+	stat = append(stat, version.Status.Desired.Image)
+
+	for _, condition := range version.Status.History {
+		if condition.State == "Completed" {
+			stat = append(stat, condition.Image)
+		}
+	}
+
+	return stat, nil
+}
+
 func OSImageURL() (string, error) {
 
 	cm := &unstructured.Unstructured{}
