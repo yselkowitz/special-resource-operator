@@ -8,7 +8,7 @@ spec:
     repository:
       name: example
       url: file:///charts/xilinx
-    version: 0.1.0
+    version: 4.7.11
   namespace: fpga-xrt-driver
   nodeSelector:
     feature.node.kubernetes.io/pci-1d0f.present: "true"
@@ -18,18 +18,9 @@ spec:
     kind: Values
     apiVersion: sro.openshift.io/v1beta1
 
-
   driverContainer:
     source:
       git:
-        ref: "main"
         uri: "https://github.com/openshift-psap/kvc-xilinx-xrt.git"
+        ref: "main"
 
-  dependencies:
-  - name: driver-container-base
-    version: "0.1.0"
-    repository:
-      name: example
-      url: "file:///charts/example"
-    tags:
-    - image-puller

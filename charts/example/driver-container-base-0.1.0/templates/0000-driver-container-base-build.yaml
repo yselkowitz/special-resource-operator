@@ -282,9 +282,9 @@ spec:
       exec:
         command: [sh, -c, 'ls /tmp/ready']
       initialDelaySeconds: 10
-      failureThreshold: 60
+      failureThreshold: 120
       successThreshold: 1
-      periodSeconds: 5
+      periodSeconds: 10
   volumes:
     - name: dockercfg
       secret:

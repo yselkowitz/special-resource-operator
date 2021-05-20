@@ -14,13 +14,13 @@ metadata:
   name: {{.Values.specialresource.metadata.name}}-{{.Values.groupName.driverBuild}}
   annotations:
     specialresource.openshift.io/wait: "true"
-    specialresource.openshift.io/driver-container-vendor: simple-kmod
+    specialresource.openshift.io/driver-container-vendor: xilinx-xrt
 spec:
   nodeSelector:
     node-role.kubernetes.io/worker: ""
   runPolicy: "Serial"
   triggers:
-#    - type: "ConfigChange"
+    - type: "ConfigChange"
     - type: "ImageChange"
   source:
     git:
@@ -30,10 +30,6 @@ spec:
   strategy:
     dockerStrategy:
       dockerfilePath: Dockerfile.SRO
-#      from:
-#        kind: "ImageStreamTag"
-#        name: "driver-container-base:v{{.Values.kernelFullVersion}}"
-#        namespace: "driver-container-base"
       buildArgs:
         {{- range $arg := .Values.buildArgs }}
         - name: {{ $arg.name }}
@@ -41,6 +37,8 @@ spec:
         {{- end }}
         - name: KVER
           value: {{ .Values.kernelFullVersion }}
+        - name: DRIVER_TOOLKIT
+          value: "quay.io/openshift-release-dev/ocp-v4.0-art-dev@sha256:e55e71960269793c1ff70b8934048bfb756ec93ce57f4268c749ab3b39c26cb3"
   output:
     to:
       kind: ImageStreamTag
