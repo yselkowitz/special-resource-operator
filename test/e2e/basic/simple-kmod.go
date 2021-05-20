@@ -27,7 +27,7 @@ var simpleKmodCrYAML []byte
 
 const (
 	pollInterval = 10 * time.Second
-	waitDuration = 30 * time.Minute
+	waitDuration = 60 * time.Minute
 )
 
 func NFDGetVersionTriple(cs *framework.ClientSet) {
