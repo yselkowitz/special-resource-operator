@@ -95,8 +95,8 @@ deploy: patch manifests
 # If the CRD is deleted before the CRs the CRD finalizer will hang forever
 # The specialresource finalizer will not execute either
 undeploy: kustomize
-	if [ ! -z "$$(kubectl get crd | grep specialresource)" ]; then                     \
-		kubectl delete --ignore-not-found sr --all --all-namespaces; \
+	if [ ! -z "$$(kubectl get crd | grep specialresource)" ]; then         \
+		kubectl delete --ignore-not-found sr --all;                    \
 	fi;
 	# Give SRO time to reconcile
 	sleep 10

@@ -11,6 +11,7 @@ import (
 	"github.com/openshift-psap/special-resource-operator/test/framework"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	v1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -87,12 +88,21 @@ func simpleKmodCreate(cs *framework.ClientSet, cl client.Client) {
 	}
 	gomega.Expect(err).NotTo(gomega.HaveOccurred(), explain)
 
-	ginkgo.By("waiting for simple-kmod daemonset to be ready")
+	var dss *v1.DaemonSetList
 
-	dss, err := cs.DaemonSets("simple-kmod").List(context.TODO(), metav1.ListOptions{})
-	if err != nil {
-		_, _ = Logf("Looking for DaemonSet", err)
-		gomega.Expect(err).NotTo(gomega.HaveOccurred(), explain)
+	for {
+		time.Sleep(10 * time.Second)
+
+		ginkgo.By("Waiting for simple-kmod daemonset to be ready")
+		dss, err = cs.DaemonSets("simple-kmod").List(context.TODO(), metav1.ListOptions{})
+		if err != nil {
+			_, _ = Logf("Looking for DaemonSet", err)
+			gomega.Expect(err).NotTo(gomega.HaveOccurred(), explain)
+		}
+
+		if len(dss.Items) > 0 {
+			break
+		}
 	}
 
 	for _, ds := range dss.Items {

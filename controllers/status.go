@@ -11,8 +11,10 @@ import (
 	configv1 "github.com/openshift/api/config/v1"
 	operatorv1helpers "github.com/openshift/library-go/pkg/operator/v1helpers"
 	"github.com/pkg/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	client "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -24,6 +26,20 @@ func operatorStatusUpdate(obj *unstructured.Unstructured, r *SpecialResourceReco
 	r.specialresource.Status.State = state
 
 	err := clients.Interface.Status().Update(context.TODO(), &r.specialresource)
+	if apierrors.IsConflict(err) {
+		sr := types.NamespacedName{Name: r.specialresource.Name, Namespace: ""}
+		err := clients.Interface.Get(context.TODO(), sr, &r.specialresource)
+		if apierrors.IsNotFound(err) {
+			return
+		}
+		// Do not update the status if we're in the process of being deleted
+		isMarkedToBeDeleted := r.specialresource.GetDeletionTimestamp() != nil
+		if isMarkedToBeDeleted {
+			return
+		}
+
+	}
+
 	if err != nil {
 		log.Error(err, "Failed to update SpecialResource status")
 		return
