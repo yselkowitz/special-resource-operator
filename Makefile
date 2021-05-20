@@ -96,8 +96,10 @@ deploy: patch manifests
 # The specialresource finalizer will not execute either
 undeploy: kustomize
 	if [ ! -z "$$(kubectl get crd | grep specialresource)" ]; then                     \
-		kubectl delete --ignore-not-found specialresource --all --all-namespaces; \
+		kubectl delete --ignore-not-found sr --all --all-namespaces; \
 	fi;
+	# Give SRO time to reconcile
+	sleep 10
 	$(KUSTOMIZE) build config/namespace | kubectl delete --ignore-not-found -f -
 
 

@@ -73,10 +73,8 @@ func DriverToolkit(entries []string) error {
 		version, imageURL := registry.ReleaseManifests("driver-toolkit", layer)
 
 		if version != "" {
-			log.Info("version", "V", version)
-			log.Info("imageURL", "V", imageURL)
+			log.Info("version", "V", version+" : "+imageURL)
 		}
-
 	}
 
 	return nil

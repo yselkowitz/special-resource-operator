@@ -20,7 +20,7 @@ spec:
     node-role.kubernetes.io/worker: ""
   runPolicy: "Serial"
   triggers:
-    - type: "ConfigChange"
+#    - type: "ConfigChange"
     - type: "ImageChange"
   source:
     git:

@@ -72,7 +72,9 @@ func SetSubResourceLabel(obj *unstructured.Unstructured) {
 	}
 }
 
-func IsSpecialResource(obj runtime.Object) bool {
+var mode string
+
+func IsSpecialResource(obj runtime.Object, meta v1.Object) bool {
 
 	kind := obj.GetObjectKind().GroupVersionKind().Kind
 
@@ -80,12 +82,14 @@ func IsSpecialResource(obj runtime.Object) bool {
 		return true
 	}
 
-	if len(kind) == 0 {
-		objstr := fmt.Sprintf("%+v", obj)
-		if strings.Contains(objstr, "SelfLink:/apis/sro.openshift.io") {
-			fmt.Printf("DEBUG SPECIALRESOURCE")
-			return true
-		}
+	selfLink := meta.GetSelfLink()
+	if strings.Contains(selfLink, "/apis/sro.openshift.io/v") {
+		return true
+	}
+
+	objstr := fmt.Sprintf("%+v", obj)
+	if strings.Contains(objstr, "sro.openshift.io/v") {
+		return true
 	}
 
 	return false
@@ -114,7 +118,9 @@ func Predicate() predicate.Predicate {
 	return predicate.Funcs{
 		CreateFunc: func(e event.CreateEvent) bool {
 
-			if IsSpecialResource(e.Object) {
+			mode = "CREATE"
+
+			if IsSpecialResource(e.Object, e.Meta) {
 				return true
 			}
 
@@ -128,11 +134,14 @@ func Predicate() predicate.Predicate {
 		UpdateFunc: func(e event.UpdateEvent) bool {
 			// Ignore updates if the resourceVersion does not change
 			// resourceVersion is updated when the object is modified
+
 			/* UPDATING THE STATUS WILL INCREASE THE RESOURCEVERSION DISABLING
 			 * BUT KEEPING FOR REFERENCE
 			if e.MetaOld.GetResourceVersion() == e.MetaNew.GetResourceVersion() {
 				return false
 			}*/
+			mode = "UPDATE"
+
 			// Ignore updates to CR status in which case metadata.Generation does not change
 			if e.MetaOld.GetGeneration() == e.MetaNew.GetGeneration() {
 				return false
@@ -140,7 +149,7 @@ func Predicate() predicate.Predicate {
 
 			// If a specialresource dependency is updated we
 			// want to reconcile it, handle the update event
-			if IsSpecialResource(e.ObjectNew) {
+			if IsSpecialResource(e.ObjectNew, e.MetaOld) {
 				return true
 			}
 
@@ -153,11 +162,12 @@ func Predicate() predicate.Predicate {
 		},
 		DeleteFunc: func(e event.DeleteEvent) bool {
 
+			mode = "DELETE"
 			// If a specialresource dependency is deleted we
-			/* want to recreate it so handle the delete event
-			if IsSpecialResource(e.Object) {
+			/* want to recreate it so handle the delete event */
+			if IsSpecialResource(e.Object, e.Meta) {
 				return true
-			}*/
+			}
 
 			// If we do not own the object, do not care
 			if NotOwned(e.Meta) {
@@ -165,6 +175,23 @@ func Predicate() predicate.Predicate {
 			}
 			// We own the resource, do something
 			return true
+		},
+		GenericFunc: func(e event.GenericEvent) bool {
+
+			mode = "GENERIC"
+
+			// If a specialresource dependency is updated we
+			// want to reconcile it, handle the update event
+			if IsSpecialResource(e.Object, e.Meta) {
+				return true
+			}
+			// If we do not own the object, do not care
+			if NotOwned(e.Meta) {
+				return false
+			}
+			// We own the resource, do something
+			return true
+
 		},
 	}
 }

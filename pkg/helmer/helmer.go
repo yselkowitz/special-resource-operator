@@ -81,6 +81,7 @@ type HelmRepo struct {
 	KeyFile string `json:"keyFile"`
 	// +kubebuilder:validation:Optional
 	CAFile string `json:"caFile"`
+	// +kubebuilder:validation:Optional
 	// +kubebuilder:default:=false
 	InsecureSkipTLSverify bool `json:"insecure_skip_tls_verify"`
 }

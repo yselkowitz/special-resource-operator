@@ -58,7 +58,6 @@ spec:
                       username:
                         type: string
                     required:
-                    - insecure_skip_tls_verify
                     - name
                     - url
                     type: object
@@ -98,7 +97,6 @@ spec:
                         username:
                           type: string
                       required:
-                      - insecure_skip_tls_verify
                       - name
                       - url
                       type: object
