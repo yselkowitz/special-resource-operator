@@ -9,6 +9,7 @@ spec:
     repository:
       name: example
       url: file:///charts/example/
+      insecure_skip_tls_verify: false
   namespace: preamble
   nodeSelector:
     node-role.kubernetes.io/worker: ""

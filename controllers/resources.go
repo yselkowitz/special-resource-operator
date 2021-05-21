@@ -11,6 +11,7 @@ import (
 	"github.com/openshift-psap/special-resource-operator/pkg/clients"
 	"github.com/openshift-psap/special-resource-operator/pkg/exit"
 	"github.com/openshift-psap/special-resource-operator/pkg/filter"
+	"github.com/openshift-psap/special-resource-operator/pkg/hash"
 	"github.com/openshift-psap/special-resource-operator/pkg/helmer"
 	"github.com/openshift-psap/special-resource-operator/pkg/kernel"
 	"github.com/openshift-psap/special-resource-operator/pkg/metrics"
@@ -247,6 +248,27 @@ func ReconcileChartStates(r *SpecialResourceReconciler, templates *unstructured.
 		metrics.SetCompletedState(r.specialresource.Name, stateYAML.Name, 1)
 	}
 
+	// We're done with states now execute the part of the chart without
+	// states we need to reconcile the nostate Chart
+	var err error
+	nostate.Values, err = chartutil.CoalesceValues(&nostate, r.specialresource.Spec.Set.Object)
+	exit.OnError(err)
+
+	rinfo, err := runtime.DefaultUnstructuredConverter.ToUnstructured(&RunInfo)
+	exit.OnError(err)
+
+	nostate.Values, err = chartutil.CoalesceValues(&nostate, rinfo)
+	exit.OnError(err)
+
+	yaml, err := helmer.TemplateChart(nostate, nostate.Values)
+	exit.OnError(err)
+
+	if err := createFromYAML(yaml, r, r.specialresource.Spec.Namespace,
+		RunInfo.KernelFullVersion,
+		RunInfo.OperatingSystemDecimal); err != nil {
+		errors.Wrap(err, "Failed to create nostate chart: "+nostate.Name())
+	}
+
 	return nil
 }
 
@@ -408,8 +430,11 @@ func CRUD(obj *unstructured.Unstructured, r *SpecialResourceReconciler) error {
 
 	if apierrors.IsNotFound(err) {
 		logger.Info("Not found, creating")
+
+		hash.Annotate(obj)
+
 		if err := clients.Interface.Create(context.TODO(), obj); err != nil {
-			return errors.Wrap(err, "Couldn't Create Resource")
+			return errors.Wrap(err, "Couldn't create resource")
 		}
 		return nil
 	}
@@ -421,16 +446,23 @@ func CRUD(obj *unstructured.Unstructured, r *SpecialResourceReconciler) error {
 	if err != nil {
 		return errors.Wrap(err, "Unexpected error")
 	}
+
 	// Not updating Pod because we can only update image and some other
 	// specific minor fields.
-	//
 	if resource.IsNotUpdateable(obj.GetKind()) {
 		log.Info("Not Updateable", "Resource", obj.GetKind())
 		return nil
 	}
 
+	if hash.AnnotationEqual(found, obj) {
+		log.Info("Found, not updating, hash the same")
+		return nil
+	}
+
 	logger.Info("Found, updating")
 	required := obj.DeepCopy()
+
+	hash.Annotate(required)
 
 	// required.ResourceVersion = found.ResourceVersion this is only needed
 	// before we update a resource, we do not care when creating, hence

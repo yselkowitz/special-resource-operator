@@ -6,6 +6,7 @@ spec:
   chart:
     name: preamble
     repository:
+      insecure_skip_tls_verify: false
       name: example
       url: file:///charts/example/
     version: 0.0.1

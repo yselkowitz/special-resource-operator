@@ -15,6 +15,7 @@ include Makefile.helper.mk
 patch:
 	cp .patches/options.patch.go vendor/github.com/google/go-containerregistry/pkg/crane/.
 	cp .patches/getter.patch.go vendor/helm.sh/helm/v3/pkg/getter/.
+	cp .patches/zapr.patch.go vendor/github.com/go-logr/zapr/.
 
 kube-lint: kube-linter
 	$(KUBELINTER) lint $(YAMLFILES)
@@ -125,7 +126,7 @@ generate: controller-gen
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
 # Build the docker image
-local-image-build: helm-lint helm-repo-index test generate manifests-gen
+local-image-build: patch helm-lint helm-repo-index test generate manifests-gen
 	podman build -f Dockerfile.ubi8 --no-cache . -t $(IMAGE)
 
 # Push the docker image
