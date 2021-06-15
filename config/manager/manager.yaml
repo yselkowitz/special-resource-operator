@@ -36,6 +36,8 @@ spec:
                   fieldPath: metadata.namespace
             - name: RELEASE_VERSION
               value: "0.0.1-snapshot"
+            - name: SSL_CERT_DIR
+              value: "/etc/pki/tls/certs"
           command:
             - /manager
           args:

@@ -25,7 +25,7 @@ FROM registry.svc.ci.openshift.org/ocp/4.8:base
 WORKDIR /
 COPY --from=builder /workspace/manager .
 
-COPY charts/ /charts/
+COPY charts/ /
 COPY manifests /manifests
 
 RUN useradd  -r -u 499 nonroot

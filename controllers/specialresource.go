@@ -80,6 +80,16 @@ func (r *SpecialResourceReconciler) GetName() string {
 // +kubebuilder:rbac:groups=shipwright.io,resources=clusterbuildstrategies,verbs=create;delete;get;list;patch;update;watch
 // +kubebuilder:rbac:groups=tekton.dev,resources=taskruns,verbs=create;delete;get;list;patch;update;watch
 // +kubebuilder:rbac:groups=tekton.dev,resources=tasks,verbs=create;delete;get;list;patch;update;watch
+// +kubebuilder:rbac:groups=storage.k8s.io,resources=volumeattachments,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=snapshot.storage.k8s.io,resources=volumesnapshotclasses,verbs=get;list;watch
+// +kubebuilder:rbac:groups=snapshot.storage.k8s.io,resources=volumesnapshots,verbs=get;list;watch;update
+// +kubebuilder:rbac:groups=snapshot.storage.k8s.io,resources=volumesnapshotcontents,verbs=create;get;list;watch;update;delete
+// +kubebuilder:rbac:groups=snapshot.storage.k8s.io,resources=volumesnapshots/status,verbs=create;get;list;watch;update;delete
+// +kubebuilder:rbac:groups=snapshot.storage.k8s.io,resources=volumesnapshotcontents/status,verbs=create;get;list;watch;update;delete
+// +kubebuilder:rbac:groups=csi.storage.k8s.io,resources=csidrivers,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=apiextensions.k8s.io,resources=customresourcedefinitions,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=apps,resources=statefulsets,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=core,resources=persistentvolumeclaims/status,verbs=get;list;watch;create;delete;update;patch
 
 // SpecialResourcesReconcile Takes care of all specialresources in the cluster
 func SpecialResourcesReconcile(r *SpecialResourceReconciler, req ctrl.Request) (ctrl.Result, error) {
@@ -199,7 +209,7 @@ func ReconcileSpecialResourceChart(r *SpecialResourceReconciler, sr srov1beta1.S
 	err := cache.Nodes(r.specialresource.Spec.NodeSelector, true)
 	exit.OnError(errors.Wrap(err, "Failed to cache nodes"))
 
-	RunInfo.ClusterUpgradeInfo, err = upgrade.NodeVersionInfo()
+	RunInfo.ClusterUpgradeInfo, err = upgrade.ClusterInfo()
 	exit.OnError(errors.Wrap(err, "Failed to get upgrade info"))
 
 	// Add a finalizer to CR if it does not already have one

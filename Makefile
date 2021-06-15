@@ -15,7 +15,7 @@ include Makefile.helper.mk
 patch:
 	cp .patches/options.patch.go vendor/github.com/google/go-containerregistry/pkg/crane/.
 	cp .patches/getter.patch.go vendor/helm.sh/helm/v3/pkg/getter/.
-	cp .patches/zapr.patch.go vendor/github.com/go-logr/zapr/.
+#	cp .patches/zapr.patch.go vendor/github.com/go-logr/zapr/.
 
 kube-lint: kube-linter
 	$(KUBELINTER) lint $(YAMLFILES)

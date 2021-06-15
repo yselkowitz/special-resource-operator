@@ -3,17 +3,49 @@ package registry
 import (
 	"archive/tar"
 	"compress/gzip"
+	"context"
 	"encoding/json"
 	"io"
-	"log"
 	"strings"
 
+	"github.com/go-logr/logr"
+	"github.com/google/go-containerregistry/pkg/authn"
+	"github.com/google/go-containerregistry/pkg/authn/k8schain"
 	"github.com/google/go-containerregistry/pkg/crane"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/openshift-psap/special-resource-operator/pkg/color"
 	"github.com/openshift-psap/special-resource-operator/pkg/exit"
 	"github.com/openshift-psap/special-resource-operator/pkg/warn"
+	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
+
+var (
+	log logr.Logger
+)
+
+func init() {
+	var err error
+
+	log = zap.New(zap.UseDevMode(true)).WithName(color.Print("wait", color.Brown))
+
+	authn.DefaultKeychain, err = k8schain.NewInCluster(context.TODO(), k8schain.Options{
+		Namespace:          "openshift-config",
+		ServiceAccountName: "default",
+		ImagePullSecrets: []string{
+			"pull-secret",
+		},
+	})
+	exit.OnError(err)
+}
+
+type DriverToolkitEntry struct {
+	ImageURL            string
+	KernelFullVersion   string
+	RTKernelFullVersion string
+	OSVersion           string
+}
 
 func LastLayer(entry string) v1.Layer {
 
@@ -25,11 +57,11 @@ func LastLayer(entry string) v1.Layer {
 		repo = tag[0]
 	}
 
-	options := crane.StrictValidation
+	options := crane.NilOption
 
 	manifest, err := crane.Manifest(entry, options)
 	if err != nil {
-		warn.OnError(err)
+		warn.OnError(errors.Wrap(err, "Cannot extract manifest"))
 		return nil
 	}
 
@@ -50,7 +82,59 @@ func LastLayer(entry string) v1.Layer {
 	return layer
 }
 
-func ReleaseManifests(name string, layer v1.Layer) (key string, value string) {
+func ExtractToolkitRelease(layer v1.Layer) (DriverToolkitEntry, error) {
+
+	targz, err := layer.Compressed()
+	defer dclose(targz)
+	exit.OnError(err)
+
+	gr, err := gzip.NewReader(targz)
+	defer dclose(gr)
+	exit.OnError(err)
+
+	tr := tar.NewReader(gr)
+
+	var dtk DriverToolkitEntry
+
+	for {
+		header, err := tr.Next()
+		if err == io.EOF {
+			break
+		}
+
+		if header.Name == "etc/driver-toolkit-release.json" {
+			buff, err := io.ReadAll(tr)
+			exit.OnError(err)
+
+			obj := unstructured.Unstructured{}
+
+			err = json.Unmarshal(buff, &obj.Object)
+			exit.OnError(err)
+
+			entry, _, err := unstructured.NestedString(obj.Object, "KERNEL_VERSION")
+			exit.OnError(err)
+			log.Info("DTK", "kernel-version", entry)
+			dtk.KernelFullVersion = entry
+
+			entry, _, err = unstructured.NestedString(obj.Object, "RT_KERNEL_VERSION")
+			exit.OnError(err)
+			log.Info("DTK", "rt-kernel-version", entry)
+			dtk.RTKernelFullVersion = entry
+
+			entry, _, err = unstructured.NestedString(obj.Object, "RHEL_VERSION")
+			exit.OnError(err)
+			log.Info("DTK", "rhel-version", entry)
+			dtk.OSVersion = entry
+
+			return dtk, err
+		}
+
+	}
+
+	return dtk, errors.New("Missing driver toolkit entry: /etc/river-toolkit-release.json")
+}
+
+func ReleaseManifests(layer v1.Layer) (key string, value string) {
 
 	targz, err := layer.Compressed()
 	defer dclose(targz)
@@ -121,6 +205,7 @@ func ReleaseManifests(name string, layer v1.Layer) (key string, value string) {
 
 func dclose(c io.Closer) {
 	if err := c.Close(); err != nil {
-		log.Fatal(err)
+		warn.OnError(err)
+		//log.Error(err)
 	}
 }

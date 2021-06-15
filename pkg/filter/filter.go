@@ -7,9 +7,8 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/openshift-psap/special-resource-operator/pkg/color"
 	"github.com/openshift-psap/special-resource-operator/pkg/exit"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -74,7 +73,7 @@ func SetSubResourceLabel(obj *unstructured.Unstructured) {
 
 var Mode string
 
-func IsSpecialResource(obj runtime.Object, meta v1.Object) bool {
+func IsSpecialResource(obj client.Object) bool {
 
 	kind := obj.GetObjectKind().GroupVersionKind().Kind
 
@@ -82,7 +81,7 @@ func IsSpecialResource(obj runtime.Object, meta v1.Object) bool {
 		return true
 	}
 
-	selfLink := meta.GetSelfLink()
+	selfLink := obj.GetSelfLink()
 	if strings.Contains(selfLink, "/apis/sro.openshift.io/v") {
 		return true
 	}
@@ -96,7 +95,7 @@ func IsSpecialResource(obj runtime.Object, meta v1.Object) bool {
 	return false
 }
 
-func NotOwned(obj v1.Object) bool {
+func NotOwned(obj client.Object) bool {
 
 	refs := obj.GetOwnerReferences()
 
@@ -120,13 +119,15 @@ func Predicate() predicate.Predicate {
 		CreateFunc: func(e event.CreateEvent) bool {
 
 			Mode = "CREATE"
-
-			if IsSpecialResource(e.Object, e.Meta) {
-				log.Info(Mode+" IsSpecialResource", "GenerationChanged", e.Meta.GetName())
+			// If a specialresource dependency is deleted we
+			/* want to recreate it so handle the delete event */
+			obj := e.Object
+			if IsSpecialResource(obj) {
+				log.Info(Mode+" IsSpecialResource", "GenerationChanged", e.Object.GetName())
 				return true
 			}
 
-			if NotOwned(e.Meta) {
+			if NotOwned(obj) {
 				return false
 			}
 
@@ -144,30 +145,34 @@ func Predicate() predicate.Predicate {
 			}*/
 			Mode = "UPDATE"
 
+			e.ObjectOld.GetGeneration()
+			e.ObjectOld.GetOwnerReferences()
+
 			// Ignore updates to CR status in which case metadata.Generation does not change
-			if e.MetaOld.GetGeneration() == e.MetaNew.GetGeneration() {
+			if e.ObjectOld.GetGeneration() == e.ObjectNew.GetGeneration() {
 				return false
 			}
 			// Some objects will increate generation on Update SRO sets the
 			// resourceversion New = Old so we can filter on those even if an
 			// update does not change anything see e.g. Deployment or SCC
-			if e.MetaOld.GetResourceVersion() == e.MetaNew.GetResourceVersion() {
+			if e.ObjectOld.GetResourceVersion() == e.ObjectNew.GetResourceVersion() {
 				return false
 			}
 
 			// If a specialresource dependency is updated we
 			// want to reconcile it, handle the update event
-			if IsSpecialResource(e.ObjectNew, e.MetaOld) {
-				log.Info(Mode+" IsSpecialResource", "GenerationChanged", e.MetaOld.GetName())
+			obj := e.ObjectNew
+			if IsSpecialResource(obj) {
+				log.Info(Mode+" IsSpecialResource", "GenerationChanged", obj.GetName())
 				return true
 			}
 
 			// If we do not own the object, do not care
-			if NotOwned(e.MetaNew) {
+			if NotOwned(obj) {
 				return false
 			}
 			// We own the resource, do something
-			log.Info(Mode+" Owned", "GenerationChanged", e.MetaOld.GetName())
+			log.Info(Mode+" Owned", "GenerationChanged", obj.GetName())
 			return true
 		},
 		DeleteFunc: func(e event.DeleteEvent) bool {
@@ -175,17 +180,18 @@ func Predicate() predicate.Predicate {
 			Mode = "DELETE"
 			// If a specialresource dependency is deleted we
 			/* want to recreate it so handle the delete event */
-			if IsSpecialResource(e.Object, e.Meta) {
-				log.Info(Mode+" IsSpecialResource", "GenerationChanged", e.Meta.GetName())
+			obj := e.Object
+			if IsSpecialResource(obj) {
+				log.Info(Mode+" IsSpecialResource", "GenerationChanged", obj.GetName())
 				return true
 			}
 
 			// If we do not own the object, do not care
-			if NotOwned(e.Meta) {
+			if NotOwned(obj) {
 				return false
 			}
 			// We own the resource, do something
-			log.Info(Mode+" Owned", "GenerationChanged", e.Meta.GetName())
+			log.Info(Mode+" Owned", "GenerationChanged", obj.GetName())
 			return true
 		},
 		GenericFunc: func(e event.GenericEvent) bool {
@@ -194,16 +200,17 @@ func Predicate() predicate.Predicate {
 
 			// If a specialresource dependency is updated we
 			// want to reconcile it, handle the update event
-			if IsSpecialResource(e.Object, e.Meta) {
-				log.Info(Mode+" IsSpecialResource", "GenerationChanged", e.Meta.GetName())
+			obj := e.Object
+			if IsSpecialResource(obj) {
+				log.Info(Mode+" IsSpecialResource", "GenerationChanged", obj.GetName())
 				return true
 			}
 			// If we do not own the object, do not care
-			if NotOwned(e.Meta) {
+			if NotOwned(obj) {
 				return false
 			}
 			// We own the resource, do something
-			log.Info(Mode+" Owned", "GenerationChanged", e.Meta.GetName())
+			log.Info(Mode+" Owned", "GenerationChanged", obj.GetName())
 			return true
 
 		},

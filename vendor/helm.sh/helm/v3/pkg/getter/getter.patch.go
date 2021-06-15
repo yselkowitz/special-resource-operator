@@ -28,7 +28,7 @@ func (g *FileGetter) Get(href string, option ...Option) (*bytes.Buffer, error) {
 
 	} else if os.IsNotExist(err) {
 		// path/to/whatever does *not* exist
-		fmt.Printf("ERROR FILE DOES NOT EXISTS %+v\n", err)
+		fmt.Printf("getter.go: ERROR FILE DOES NOT EXISTS %+v\n", err)
 		os.Exit(1)
 
 	} else {

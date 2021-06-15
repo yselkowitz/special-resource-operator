@@ -38,6 +38,7 @@ type RuntimeInformation struct {
 	OperatingSystemDecimal    string                         `json:"operatingSystemDecimal"`
 	KernelFullVersion         string                         `json:"kernelFullVersion"`
 	KernelPatchVersion        string                         `json:"kernelPatchVersion"`
+	DriverToolkitImage        string                         `json:"driverToolkitImage"`
 	ClusterVersion            string                         `json:"clusterVersion"`
 	ClusterVersionMajorMinor  string                         `json:"clusterVersionMajorMinor"`
 	ClusterUpgradeInfo        map[string]upgrade.NodeVersion `json:"clusterUpgradeInfo"`
@@ -108,7 +109,7 @@ func getRuntimeInformation(r *SpecialResourceReconciler) {
 	RunInfo.ClusterVersion, RunInfo.ClusterVersionMajorMinor, err = cluster.Version()
 	exit.OnError(errors.Wrap(err, "Failed to get cluster version"))
 
-	RunInfo.ClusterUpgradeInfo, err = upgrade.NodeVersionInfo()
+	RunInfo.ClusterUpgradeInfo, err = upgrade.ClusterInfo()
 	exit.OnError(errors.Wrap(err, "Failed to get upgrade info"))
 
 	RunInfo.PushSecretName, err = retryGetPushSecretName(r)

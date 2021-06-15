@@ -61,6 +61,8 @@ spec:
               fieldPath: metadata.namespace
         - name: RELEASE_VERSION
           value: 0.0.1-snapshot
+        - name: SSL_CERT_DIR
+          value: /etc/pki/tls/certs
         image: quay.io/openshift-psap/special-resource-operator:helm-support
         imagePullPolicy: Always
         name: manager

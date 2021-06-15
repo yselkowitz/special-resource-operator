@@ -21,7 +21,7 @@ spec:
     node-role.kubernetes.io/worker: ""
   runPolicy: "Serial"
   triggers:
-#    - type: "ConfigChange"
+    - type: "ConfigChange"
     - type: "ImageChange"
   source:
     git:
@@ -31,11 +31,13 @@ spec:
   strategy:
     dockerStrategy:
       dockerfilePath: Dockerfile.SRO
-      from:
-        kind: "ImageStreamTag"
-        name: "driver-container-base:v{{.Values.kernelFullVersion}}"
-        namespace: "driver-container-base"
+#      from:
+#        kind: "ImageStreamTag"
+#        name: "driver-container-base:v{{.Values.kernelFullVersion}}"
+#        namespace: "driver-container-base"
       buildArgs:
+        - name: "IMAGE"
+          value: {{ .Values.driverToolkitImage  }}
         {{- range $arg := .Values.buildArgs }}
         - name: {{ $arg.name }}
           value: {{ $arg.value }}

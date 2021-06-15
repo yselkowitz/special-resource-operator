@@ -19,10 +19,12 @@ import (
 	"github.com/openshift-psap/special-resource-operator/pkg/slice"
 	"github.com/openshift-psap/special-resource-operator/pkg/state"
 	"github.com/openshift-psap/special-resource-operator/pkg/upgrade"
+	"github.com/openshift-psap/special-resource-operator/pkg/warn"
 	"github.com/openshift-psap/special-resource-operator/pkg/yamlutil"
 	"github.com/pkg/errors"
 	"helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/chartutil"
+	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -198,12 +200,14 @@ func ReconcileChartStates(r *SpecialResourceReconciler, templates *unstructured.
 
 			RunInfo.ClusterVersionMajorMinor = version.ClusterVersion
 			RunInfo.OperatingSystemDecimal = version.OSVersion
+			RunInfo.DriverToolkitImage = version.DriverToolkit.ImageURL
 
 			if kernelAffine {
 				log.Info("KernelAffine: ClusterUpgradeInfo",
 					"kernel", RunInfo.KernelFullVersion,
 					"os", RunInfo.OperatingSystemDecimal,
-					"cluster", RunInfo.ClusterVersionMajorMinor)
+					"cluster", RunInfo.ClusterVersionMajorMinor,
+					"driverToolkit", RunInfo.DriverToolkitImage)
 			}
 
 			var err error
@@ -218,13 +222,13 @@ func ReconcileChartStates(r *SpecialResourceReconciler, templates *unstructured.
 
 			/* DO NOT REMOVE: Used for debuggging
 			d, _ := yaml.Marshal(step.Values)
-			fmt.Printf("%s\n", d) */
+			fmt.Printf("%s\n", d)
+			*/
 
 			yaml, err := helmer.TemplateChart(step, step.Values)
 			exit.OnError(err)
 
 			// DO NOT REMOVE: fmt.Printf("--------------------------------------------------\n\n%s\n\n", yaml)
-
 			err = createFromYAML(yaml, r, r.specialresource.Spec.Namespace,
 				RunInfo.KernelFullVersion,
 				RunInfo.OperatingSystemDecimal)
@@ -262,6 +266,12 @@ func ReconcileChartStates(r *SpecialResourceReconciler, templates *unstructured.
 
 	yaml, err := helmer.TemplateChart(nostate, nostate.Values)
 	exit.OnError(err)
+
+	// If we only have SRO states, the nostate may be empty, just return
+	if len(yaml) <= 1 {
+		log.Info("NoState chart empty, returning")
+		return nil
+	}
 
 	if err := createFromYAML(yaml, r, r.specialresource.Spec.Namespace,
 		RunInfo.KernelFullVersion,
@@ -354,7 +364,7 @@ func createFromYAML(yamlFile []byte, r *SpecialResourceReconciler,
 		}
 
 		err = obj.UnmarshalJSON(jsonSpec)
-		exit.OnError(errors.Wrap(err, "Cannot unmarshall json spec, check your manifests"))
+		exit.OnError(errors.Wrap(err, "Cannot unmarshall json spec, check your manifest: "+string(jsonSpec)))
 
 		if resource.IsNamespaced(obj.GetKind()) {
 			obj.SetNamespace(namespace)
@@ -420,10 +430,10 @@ func CRUD(obj *unstructured.Unstructured, r *SpecialResourceReconciler) error {
 	found := obj.DeepCopy()
 
 	// SpecialResource is the parent, all other objects are childs and need a reference
+	// but only set the ownerreference if created by SRO do not set ownerreference per default
 	if obj.GetKind() != "SpecialResource" {
-		if err := controllerutil.SetControllerReference(&r.specialresource, obj, r.Scheme); err != nil {
-			return errors.Wrap(err, "Failed to set controller reference")
-		}
+		err := controllerutil.SetControllerReference(&r.specialresource, obj, r.Scheme)
+		warn.OnError(err)
 	}
 
 	err := clients.Interface.Get(context.TODO(), types.NamespacedName{Namespace: obj.GetNamespace(), Name: obj.GetName()}, found)
@@ -436,6 +446,7 @@ func CRUD(obj *unstructured.Unstructured, r *SpecialResourceReconciler) error {
 		if err := clients.Interface.Create(context.TODO(), obj); err != nil {
 			return errors.Wrap(err, "Couldn't create resource")
 		}
+
 		return nil
 	}
 
@@ -454,8 +465,12 @@ func CRUD(obj *unstructured.Unstructured, r *SpecialResourceReconciler) error {
 		return nil
 	}
 
+	if equality.Semantic.DeepEqual(found, obj) {
+		log.Info("equality.Semantic, equal")
+	}
+
 	if hash.AnnotationEqual(found, obj) {
-		log.Info("Found, not updating, hash the same")
+		log.Info("Found, not updating, hash the same: " + found.GetKind() + "/" + found.GetName())
 		return nil
 	}
 

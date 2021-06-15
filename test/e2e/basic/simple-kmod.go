@@ -56,37 +56,39 @@ func simpleKmodCreate(cs *framework.ClientSet, cl client.Client) {
 	}
 	framework.CreateFromYAML(simpleKmodCrYAML, cl)
 
-	ginkgo.By("waiting for completion driver-container-base build")
-	err = wait.PollImmediate(pollInterval, waitDuration, func() (bool, error) {
+	/*
+		ginkgo.By("waiting for completion driver-container-base build")
+		err = wait.PollImmediate(pollInterval, waitDuration, func() (bool, error) {
 
-		dcbPods, err := cs.Pods("driver-container-base").List(context.TODO(), metav1.ListOptions{})
-		if err != nil {
-			return false, fmt.Errorf("Error getting list of pods, %v", err)
-		}
-
-		if len(dcbPods.Items) < 1 {
-			return false, nil
-		}
-
-		var sum = len(dcbPods.Items)
-		for _, pod := range dcbPods.Items {
-			// Get logs of driverContainerBase
-			_ = GetRecentPodLogs(pod.GetName(), pod.GetNamespace(), pollInterval)
-			if pod.Status.Phase == "Succeeded" {
-				sum = sum - 1
+			dcbPods, err := cs.Pods("driver-container-base").List(context.TODO(), metav1.ListOptions{})
+			if err != nil {
+				return false, fmt.Errorf("Error getting list of pods, %v", err)
 			}
-		}
 
-		if sum == 0 {
-			return true, nil
-		}
+			if len(dcbPods.Items) < 1 {
+				return false, nil
+			}
 
-		return false, nil
-	})
-	if err != nil {
-		explain = err.Error()
-	}
-	gomega.Expect(err).NotTo(gomega.HaveOccurred(), explain)
+			var sum = len(dcbPods.Items)
+			for _, pod := range dcbPods.Items {
+				// Get logs of driverContainerBase
+				_ = GetRecentPodLogs(pod.GetName(), pod.GetNamespace(), pollInterval)
+				if pod.Status.Phase == "Succeeded" {
+					sum = sum - 1
+				}
+			}
+
+			if sum == 0 {
+				return true, nil
+			}
+
+			return false, nil
+		})
+		if err != nil {
+			explain = err.Error()
+		}
+		gomega.Expect(err).NotTo(gomega.HaveOccurred(), explain)
+	*/
 
 	var dss *v1.DaemonSetList
 

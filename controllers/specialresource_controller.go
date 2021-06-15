@@ -17,6 +17,7 @@ limitations under the License.
 package controllers
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/go-logr/logr"
@@ -60,7 +61,7 @@ type SpecialResourceReconciler struct {
 }
 
 // Reconcile Reconiliation entry point
-func (r *SpecialResourceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
+func (r *SpecialResourceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 
 	var err error
 	var res reconcile.Result

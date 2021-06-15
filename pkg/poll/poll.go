@@ -43,12 +43,13 @@ func init() {
 	waitFor["DaemonSet"] = ForDaemonSet
 	waitFor["BuildConfig"] = ForBuild
 	waitFor["Secret"] = ForSecret
+	log = zap.New(zap.UseDevMode(true)).WithName(color.Print("wait", color.Brown))
 }
 
 type statusCallback func(obj *unstructured.Unstructured) bool
 
 func init() {
-	log = zap.New(zap.UseDevMode(true)).WithName(color.Print("wait", color.Brown))
+
 }
 
 func ForResourceAvailability(obj *unstructured.Unstructured) error {

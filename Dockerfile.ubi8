@@ -18,7 +18,6 @@ COPY controllers/ controllers/
 COPY pkg/ pkg/
 COPY vendor/ vendor/
 
-
 # Build
 RUN CGO_ENABLED=0 GO111MODULE=on go build -mod=vendor -a -o manager main.go
 

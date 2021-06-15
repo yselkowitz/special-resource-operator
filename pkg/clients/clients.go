@@ -4,6 +4,7 @@ import (
 	"os"
 
 	"github.com/go-logr/logr"
+	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/openshift-psap/special-resource-operator/pkg/color"
 	clientconfigv1 "github.com/openshift/client-go/config/clientset/versioned/typed/config/v1"
 	"k8s.io/client-go/kubernetes"
@@ -20,19 +21,18 @@ var (
 	Namespace  string
 )
 
-func init() {
-
-}
-
 type ClientsInterface struct {
 	client.Client
 	kubernetes.Clientset
 	clientconfigv1.ConfigV1Client
 	record.EventRecorder
+	authn.Keychain
 }
 
 func init() {
+
 	log = zap.New(zap.UseDevMode(true)).WithName(color.Print("exit", color.Red))
+
 }
 
 // GetKubeClientSetOrDie Add a native non-caching client for advanced CRUD operations

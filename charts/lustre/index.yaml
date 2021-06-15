@@ -3,13 +3,13 @@ entries:
   lustre-aws-fsx:
   - apiVersion: v2
     appVersion: 1.0.0
-    created: "2021-05-21T10:52:43.049205484Z"
+    created: "2021-06-15T09:30:23.976452383Z"
     description: Out-of-tree driver for Lustre accessing AWS FSx service
-    digest: 549e35c14067016d7079e4c85c09507f84f1d5584d7aacae23616ae3719ea7ae
+    digest: afd0c933a225e991104dd32c22e711f05a275909b17f5c3f877149f6666e2257
     icon: https://avatars.githubusercontent.com/u/55542927
     name: lustre-aws-fsx
     type: application
     urls:
     - file:///charts/lustre/lustre-aws-fsx-0.0.1.tgz
     version: 0.0.1
-generated: "2021-05-21T10:52:43.048740924Z"
+generated: "2021-06-15T09:30:23.975944842Z"
