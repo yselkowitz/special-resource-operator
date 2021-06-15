@@ -33,6 +33,7 @@ type ResourceGroupName struct {
 }
 
 type RuntimeInformation struct {
+	OnOCP                     bool                           `json:"onOCP"`
 	OperatingSystemMajor      string                         `json:"operatingSystemMajor"`
 	OperatingSystemMajorMinor string                         `json:"operatingSystemMajorMinor"`
 	OperatingSystemDecimal    string                         `json:"operatingSystemDecimal"`
@@ -51,6 +52,7 @@ type RuntimeInformation struct {
 }
 
 var RunInfo = RuntimeInformation{
+	OnOCP:                     true,
 	OperatingSystemMajor:      "",
 	OperatingSystemMajorMinor: "",
 	OperatingSystemDecimal:    "",
@@ -77,6 +79,7 @@ var RunInfo = RuntimeInformation{
 }
 
 func logRuntimeInformation() {
+	log.Info("Runtime Information", "OnOCP", RunInfo.OnOCP)
 	log.Info("Runtime Information", "OperatingSystemMajor", RunInfo.OperatingSystemMajor)
 	log.Info("Runtime Information", "OperatingSystemMajorMinor", RunInfo.OperatingSystemMajorMinor)
 	log.Info("Runtime Information", "OperatingSystemDecimal", RunInfo.OperatingSystemDecimal)
@@ -99,6 +102,8 @@ func getRuntimeInformation(r *SpecialResourceReconciler) {
 	err = cache.Nodes(r.specialresource.Spec.NodeSelector, false)
 	exit.OnError(errors.Wrap(err, "Failed to cache nodes"))
 
+	RunInfo.OnOCP = cluster.OnOCP()
+
 	RunInfo.OperatingSystemMajor, RunInfo.OperatingSystemMajorMinor, RunInfo.OperatingSystemDecimal, err = cluster.OperatingSystem()
 	exit.OnError(errors.Wrap(err, "Failed to get operating system"))
 
@@ -109,19 +114,19 @@ func getRuntimeInformation(r *SpecialResourceReconciler) {
 	exit.OnError(errors.Wrap(err, "Failed to get kernel patch version"))
 
 	RunInfo.ClusterVersion, RunInfo.ClusterVersionMajorMinor, err = cluster.Version()
-	exit.OnError(errors.Wrap(err, "Failed to get cluster version"))
+	cluster.WarnOnK8sFailOnOCP(err, "Failed to get cluster version")
 
 	RunInfo.ClusterUpgradeInfo, err = upgrade.ClusterInfo()
 	exit.OnError(errors.Wrap(err, "Failed to get upgrade info"))
 
 	RunInfo.PushSecretName, err = retryGetPushSecretName(r)
-	exit.OnError(errors.Wrap(err, "Failed to get push secret name"))
+	cluster.WarnOnK8sFailOnOCP(err, "Failed to get push secret name")
 
 	RunInfo.OSImageURL, err = cluster.OSImageURL()
-	exit.OnError(errors.Wrap(err, "Failed to get OSImageURL"))
+	cluster.WarnOnK8sFailOnOCP(err, "Failed to get OSImageURL")
 
 	RunInfo.Proxy, err = proxy.ClusterConfiguration()
-	exit.OnError(errors.Wrap(err, "Failed to get Proxy Configuration"))
+	cluster.WarnOnK8sFailOnOCP(err, "Failed to get Proxy Configuration")
 
 	r.specialresource.DeepCopyInto(&RunInfo.SpecialResource)
 }

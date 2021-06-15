@@ -9,6 +9,7 @@ import (
 	"github.com/openshift-psap/special-resource-operator/pkg/assets"
 	"github.com/openshift-psap/special-resource-operator/pkg/cache"
 	"github.com/openshift-psap/special-resource-operator/pkg/clients"
+	"github.com/openshift-psap/special-resource-operator/pkg/cluster"
 	"github.com/openshift-psap/special-resource-operator/pkg/exit"
 	"github.com/openshift-psap/special-resource-operator/pkg/filter"
 	"github.com/openshift-psap/special-resource-operator/pkg/hash"
@@ -315,8 +316,7 @@ func ReconcileChart(r *SpecialResourceReconciler) error {
 	// specialresource name == namespace if not metadata.namespace is set
 	createSpecialResourceNamespace(r)
 	if err := createImagePullerRoleBinding(r); err != nil {
-		return errors.Wrap(err, "Could not create ImagePuller RoleBinding ")
-
+		cluster.WarnOnK8sFailOnOCP(err, "Could not create ImagePuller RoleBinding")
 	}
 
 	// Check if we have a ConfigMap deployed in the specialresrouce

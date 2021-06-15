@@ -2,10 +2,13 @@ package cluster
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
+	"github.com/go-logr/logr"
 	"github.com/openshift-psap/special-resource-operator/pkg/cache"
 	"github.com/openshift-psap/special-resource-operator/pkg/clients"
+	"github.com/openshift-psap/special-resource-operator/pkg/color"
 	"github.com/openshift-psap/special-resource-operator/pkg/exit"
 	"github.com/openshift-psap/special-resource-operator/pkg/osversion"
 	"github.com/pkg/errors"
@@ -13,7 +16,31 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
+
+var (
+	log logr.Logger
+)
+
+func init() {
+	log = zap.New(zap.UseDevMode(true)).WithName(color.Print("cache", color.Brown))
+}
+
+func OnOCP() bool {
+	var found bool
+	// Assuming all nodes are running the same openshift version
+	for _, node := range cache.Node.List.Items {
+		labels := node.GetLabels()
+
+		// Check if there is a label from NFD for OPENSHIFT_VERSION
+		key := "feature.node.kubernetes.io/system-os_release.OPENSHIFT_VERSION"
+		_, found := labels[key]
+		return found
+	}
+
+	return found
+}
 
 func Version() (string, string, error) {
 
@@ -100,4 +127,14 @@ func OperatingSystem() (string, string, string, error) {
 	}
 
 	return osversion.RenderOperatingSystem(nodeOSrel, nodeOSmaj, nodeOSmin)
+}
+
+func WarnOnK8sFailOnOCP(err error, message string) {
+	if err != nil {
+		if OnOCP() == true {
+			exit.OnError(errors.Wrap(err, message))
+		} else {
+			log.Info(fmt.Sprintf("Warning: %s. If running in vanilla k8s this can be ignored", message))
+		}
+	}
 }

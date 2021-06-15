@@ -57,6 +57,12 @@ func Nodes(matchingLabels map[string]string, force bool) error {
 		opts = append(opts, client.MatchingLabels(matchingLabels))
 	} else {
 		opts = append(opts, client.MatchingLabels{"node-role.kubernetes.io/worker": ""})
+		opts = append(opts, client.MatchingLabels{"node-role.kubernetes.io/node": ""})
+	}
+
+	log.Info("Node list:", "length", len(Node.List.Items))
+	if len(Node.List.Items) == 0 {
+		log.Info("No nodes found for the SpecialResource. Consider setting .Spec.Node.Selector in the CR or labeling worker nodes.")
 	}
 
 	err := clients.Interface.List(context.TODO(), Node.List, opts...)

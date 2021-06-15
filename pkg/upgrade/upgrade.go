@@ -37,7 +37,7 @@ func ClusterInfo() (map[string]NodeVersion, error) {
 	exit.OnError(errors.Wrap(err, "Failed to get upgrade info"))
 
 	history, err := cluster.VersionHistory()
-	exit.OnError(errors.Wrap(err, "Could not get version history"))
+	cluster.WarnOnK8sFailOnOCP(err, "Could not get version history")
 
 	versions, err := DriverToolkitVersion(history, info)
 	exit.OnError(err)
@@ -58,6 +58,8 @@ func NodeVersionInfo() (map[string]NodeVersion, error) {
 		var kernelFullVersion string
 		var clusterVersion string
 
+		onOCP := cluster.OnOCP()
+
 		labels := node.GetLabels()
 		// We only need to check for the key, the value
 		// is available if the key is there
@@ -67,7 +69,7 @@ func NodeVersionInfo() (map[string]NodeVersion, error) {
 		}
 
 		short = "feature.node.kubernetes.io/system-os_release.RHEL_VERSION"
-		if rhelVersion, found = labels[short]; !found {
+		if rhelVersion, found = labels[short]; !found && onOCP {
 			return nil, errors.New("Label " + short + " not found is NFD running? Check node labels")
 		}
 

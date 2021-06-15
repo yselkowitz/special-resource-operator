@@ -1,0 +1,25 @@
+apiVersion: sro.openshift.io/v1beta1
+kind: SpecialResource
+metadata:
+  name: centos-simple-kmod
+spec:
+  namespace: centos-simple-kmod
+  chart:
+    name: centos-simple-kmod
+    version: 0.0.1
+    repository:
+      name: example
+      url: file:///charts/example
+  set:
+    pull_secret_creds: "pull" # pull secret .dockerconfigjson value. Should be a robot account
+    kind: Values
+    apiVersion: sro.openshift.io/v1beta1
+    kmodNames: ["simple-kmod", "simple-procfs-kmod"]
+    buildArgs:
+    - name: "KMODVER"
+      value: "SRO"
+  driverContainer:
+    source:
+      git:
+        ref: "vanilla-k8s-centos"
+        uri: "https://github.com/dagrayvid/kvc-simple-kmod.git"
