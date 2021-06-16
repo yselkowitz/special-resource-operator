@@ -57,8 +57,8 @@ func init() {
 	//	MaxHistory:       0,
 	// }
 
-	settings.RepositoryConfig = "/tmp/helm/repositories.yaml"
-	settings.RepositoryCache = "/tmp/helm/cache"
+	settings.RepositoryConfig = "/cache/helm/repositories/config.yaml"
+	settings.RepositoryCache = "/cache/helm/cache"
 	settings.Debug = true
 
 	getterProviders = getter.All(settings)
