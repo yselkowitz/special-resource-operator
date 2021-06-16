@@ -89,8 +89,4 @@ specialresource:
   status:
     state: ""
 updateVendor: ""
-
 ```
-
-
-

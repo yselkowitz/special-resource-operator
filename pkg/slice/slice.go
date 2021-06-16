@@ -1,19 +1,8 @@
 package slice
 
 import (
-	"github.com/go-logr/logr"
-	"github.com/openshift-psap/special-resource-operator/pkg/color"
 	"helm.sh/helm/v3/pkg/chart"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
-
-var (
-	log logr.Logger
-)
-
-func init() {
-	log = zap.New(zap.UseDevMode(true)).WithName(color.Print("slice", color.Blue))
-}
 
 // Find returns the smallest index i at which x == a[i],
 // or len(a) if there is no such index.

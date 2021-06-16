@@ -8,12 +8,10 @@ import (
 
 var CurrentName string
 
-func GenerateName(file *chart.File, sr string) error {
+func GenerateName(file *chart.File, sr string) {
 
 	prefix := "specialresource.openshift.io/state-"
 	seq := path.Base(file.Name)[:4]
 
 	CurrentName = prefix + sr + "-" + seq
-
-	return nil
 }

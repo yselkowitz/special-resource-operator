@@ -169,7 +169,7 @@ func Load(spec HelmChart) (*chart.Chart, error) {
 
 	var path string
 	if path, err = act.LocateChart(repoChartName, settings); err != nil {
-		errors.Wrap(err, "Could not locate chart: "+repoChartName)
+		return nil, errors.Wrap(err, "Could not locate chart: "+repoChartName)
 	}
 
 	loaded, err := loader.Load(path)

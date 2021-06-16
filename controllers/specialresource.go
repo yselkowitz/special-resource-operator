@@ -167,7 +167,7 @@ func SpecialResourcesReconcile(r *SpecialResourceReconciler, req ctrl.Request) (
 		// Assign the specialresource to the reconciler object
 		if child, err = getDependencyFrom(specialresources, r.dependency.Name); err != nil {
 			log.Info("Could not get SpecialResource dependency", "error", fmt.Sprintf("%v", err))
-			if child, err = createSpecialResourceFrom(r, cchart.Files, r.dependency.Name); err != nil {
+			if _, err = createSpecialResourceFrom(r, cchart.Files, r.dependency.Name); err != nil {
 				log.Info("RECONCILE REQUEUE: Dependency creation failed ", "error", fmt.Sprintf("%v", err))
 				return reconcile.Result{Requeue: true}, nil
 			}

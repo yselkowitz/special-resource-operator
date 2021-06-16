@@ -74,7 +74,8 @@ func finalizeSpecialResource(r *SpecialResourceReconciler) error {
 	// If this special resources is deleted we're going to remove all
 	// specialresource labels from the nodes.
 	if r.specialresource.Name == "special-resource-preamble" {
-		finalizeNodes(r, "specialresource.openshift.io")
+		err := finalizeNodes(r, "specialresource.openshift.io")
+		warn.OnError(err)
 	}
 	err := finalizeNodes(r, "specialresource.openshift.io/state-"+r.specialresource.Name)
 	warn.OnError(err)

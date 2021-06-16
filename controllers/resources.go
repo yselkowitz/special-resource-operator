@@ -276,7 +276,7 @@ func ReconcileChartStates(r *SpecialResourceReconciler, templates *unstructured.
 	if err := createFromYAML(yaml, r, r.specialresource.Spec.Namespace,
 		RunInfo.KernelFullVersion,
 		RunInfo.OperatingSystemDecimal); err != nil {
-		errors.Wrap(err, "Failed to create nostate chart: "+nostate.Name())
+		return errors.Wrap(err, "Failed to create nostate chart: "+nostate.Name())
 	}
 
 	return nil
@@ -310,9 +310,8 @@ metadata:
 func ReconcileChart(r *SpecialResourceReconciler) error {
 
 	var err error
-	templates := &unstructured.Unstructured{
-		Object: map[string]interface{}{},
-	}
+	var templates *unstructured.Unstructured
+
 	// Leave this here, this is crucial for all following work
 	// Creating and setting the working namespace for the specialresource
 	// specialresource name == namespace if not metadata.namespace is set

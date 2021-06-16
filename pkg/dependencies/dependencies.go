@@ -4,23 +4,12 @@ import (
 	"context"
 	"os"
 
-	"github.com/go-logr/logr"
 	"github.com/openshift-psap/special-resource-operator/pkg/clients"
-	"github.com/openshift-psap/special-resource-operator/pkg/color"
 	"github.com/openshift-psap/special-resource-operator/pkg/exit"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
-
-var (
-	log logr.Logger
-)
-
-func init() {
-	log = zap.New(zap.UseDevMode(true)).WithName(color.Print("dependencies", color.Brown))
-}
 
 func getConfigMap(namespace string, name string) *unstructured.Unstructured {
 
@@ -41,7 +30,7 @@ func getConfigMap(namespace string, name string) *unstructured.Unstructured {
 
 func CheckConfigMap(child string) string {
 
-	cm := getConfigMap(os.Getenv("OPERATOR_NAMESPACE"), "special-resource-depedencies")
+	cm := getConfigMap(os.Getenv("OPERATOR_NAMESPACE"), "special-resource-dependencies")
 
 	data, found, err := unstructured.NestedMap(cm.Object, "data")
 	exit.OnError(err)
@@ -59,16 +48,17 @@ func CheckConfigMap(child string) string {
 
 func UpdateConfigMap(parent string, child string) {
 
-	cm := getConfigMap(os.Getenv("OPERATOR_NAMESPACE"), "special-resource-depedencies")
+	cm := getConfigMap(os.Getenv("OPERATOR_NAMESPACE"), "special-resource-dependencies")
 
-	data, found, err := unstructured.NestedMap(cm.Object, "data")
+	// Just looking if exists so we can create or update
+	_, found, err := unstructured.NestedMap(cm.Object, "data")
 	exit.OnError(err)
 
 	dependencies := make(map[string]interface{})
 	dependencies[child] = parent
 
 	if !found {
-		data = make(map[string]interface{})
+		data := make(map[string]interface{})
 		data["data"] = dependencies
 		err := unstructured.SetNestedMap(cm.Object, dependencies, "data")
 		exit.OnError(err)
