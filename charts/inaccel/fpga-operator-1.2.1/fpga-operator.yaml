@@ -5,8 +5,10 @@ metadata:
 spec:
   chart:
     name: fpga-operator
-    repository: file://charts/inaccel
-    version: 1.2.1
+    version: 2.1.1
+    repository:
+      name: inaccel
+      url: https://setup.inaccel.com/helm
   namespace: inaccel-fpga-operator
   nodeSelector: ""
   set:
@@ -17,7 +19,7 @@ spec:
       pullPolicy: Always
       # resources: ...
       # tag: ...
-    # license: ...
+      #license:
     monitor:
       image: inaccel/monitor
       # port: ...
