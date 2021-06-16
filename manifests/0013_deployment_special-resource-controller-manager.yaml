@@ -75,7 +75,10 @@ spec:
             memory: 300Mi
         securityContext:
           allowPrivilegeEscalation: false
-          readOnlyRootFilesystem: false
+          readOnlyRootFilesystem: true
+        volumeMounts:
+        - mountPath: /cache
+          name: cache-volume
       securityContext:
         runAsGroup: 499
         runAsNonRoot: true
@@ -85,3 +88,5 @@ spec:
       - name: special-resource-operator-tls
         secret:
           secretName: special-resource-operator-tls
+      - emptyDir: {}
+        name: cache-volume

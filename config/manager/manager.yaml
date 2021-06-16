@@ -48,7 +48,7 @@ spec:
           name: manager
           securityContext:
             allowPrivilegeEscalation: false
-            readOnlyRootFilesystem: false
+            readOnlyRootFilesystem: true
           resources:
             limits:
               cpu: 300m
@@ -56,8 +56,13 @@ spec:
             requests:
               cpu: 300m
               memory: 300Mi
+          volumeMounts:
+          - name: cache-volume
+            mountPath: /cache
       volumes:
         - name: special-resource-operator-tls
           secret:
             secretName: special-resource-operator-tls
+        - name: cache-volume
+          emptyDir: {}
       terminationGracePeriodSeconds: 10
