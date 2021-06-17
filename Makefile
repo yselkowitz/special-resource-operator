@@ -122,10 +122,14 @@ manifests-gen: controller-gen
 manifests: manifests-gen kustomize configure
 	if [[ $(PROMETHEUS) == 0 ]]; then \
 		echo "Deployment expects Prometheus operator for ServiceMonitor"; \
-		sed -i 's/^#- ..\/prometheus/- ..\/prometheus/g' config/default/kustomization.yaml; \
+		sed -i 's/^#- ..\/prometheus/- ..\/prometheus/' config/default/kustomization.yaml; \
+		sed -i 's/^#patchesStrategicMerge:/patchesStrategicMerge:/' config/default/kustomization.yaml
+		sed -i 's/^#- manager_auth_proxy_patch.yaml:/- manager_auth_proxy_patch.yaml/' config/default/kustomization.yaml
 	else \
 		echo "Disabling Prometheus ServiceMonitor"; \
 		sed -i 's/^- ..\/prometheus/#- ..\/prometheus/g' config/default/kustomization.yaml; \
+		sed -i 's/^patchesStrategicMerge:/#patchesStrategicMerge:/' config/default/kustomization.yaml
+		sed -i 's/^- manager_auth_proxy_patch.yaml:/#- manager_auth_proxy_patch.yaml/' config/default/kustomization.yaml
 	fi;
 	cd $@; rm -f 00*
 	cd $@; $(KUSTOMIZE) build ../config/namespace | $(CSPLIT)

@@ -3,7 +3,7 @@ entries:
   centos-centos-simple-kmod:
   - apiVersion: v2
     appVersion: 1.0.0
-    created: "2021-06-17T15:06:53.103451035-04:00"
+    created: "2021-06-17T17:49:12.797248158-04:00"
     description: Simple kmod will deploy a simple kmod driver-container
     digest: 94619a263900939def63a1c771603c666458fa0161394616a26ce503c085f22f
     icon: https://avatars.githubusercontent.com/u/55542927
@@ -15,9 +15,9 @@ entries:
   centos-simple-kmod:
   - apiVersion: v2
     appVersion: 1.0.0
-    created: "2021-06-17T15:06:53.103614223-04:00"
+    created: "2021-06-17T17:49:12.797443981-04:00"
     description: Simple kmod will deploy a simple kmod driver-container
-    digest: fee514e369cb7868fc42c6906f25c564de453144a5cfac8cd90d4a32d34d6ec2
+    digest: 41753fb6dec3edfc45207a11444c5649dd978906363b530783dbc27c0a65b8d1
     icon: https://avatars.githubusercontent.com/u/55542927
     name: centos-simple-kmod
     type: application
@@ -27,9 +27,9 @@ entries:
   ping-pong:
   - apiVersion: v2
     appVersion: 1.0.0
-    created: "2021-06-17T15:06:53.103959553-04:00"
+    created: "2021-06-17T17:49:12.797827138-04:00"
     description: Simple go app to showcase cert-manager intergration
-    digest: 99cb3c88397090e5fa61e13f7809c6a3d2180acf2b56949e588d759befd63786
+    digest: edd7d42908dcdcd18b3742f313914e8605846f7152359b897a6fb88daa0a2312
     icon: https://avatars.githubusercontent.com/u/55542927
     name: ping-pong
     type: application
@@ -39,13 +39,13 @@ entries:
   simple-kmod:
   - apiVersion: v2
     appVersion: 1.0.0
-    created: "2021-06-17T15:06:53.104093343-04:00"
+    created: "2021-06-17T17:49:12.797968769-04:00"
     description: Simple kmod will deploy a simple kmod driver-container
-    digest: d365be60f582c93cda4bd50f10d0834519c6473b2a84b9526078b39f49be397b
+    digest: eca9a95d67cdc40bd6cc9c379f30e799685c4dcf68cc2aad66c4e73cc6d17f8c
     icon: https://avatars.githubusercontent.com/u/55542927
     name: simple-kmod
     type: application
     urls:
     - file:///charts/example/simple-kmod-0.0.1.tgz
     version: 0.0.1
-generated: "2021-06-17T15:06:53.103174047-04:00"
+generated: "2021-06-17T17:49:12.796974333-04:00"
