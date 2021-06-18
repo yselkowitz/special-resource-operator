@@ -4,6 +4,8 @@ metadata:
   name: centos-simple-kmod
 spec:
   namespace: centos-simple-kmod
+  nodeSelector: 
+    node-role.kubernetes.io/node: ""
   chart:
     name: centos-simple-kmod
     version: 0.0.1

@@ -1,23 +1,11 @@
 apiVersion: v1
 entries:
-  centos-centos-simple-kmod:
-  - apiVersion: v2
-    appVersion: 1.0.0
-    created: "2021-06-17T17:49:12.797248158-04:00"
-    description: Simple kmod will deploy a simple kmod driver-container
-    digest: 94619a263900939def63a1c771603c666458fa0161394616a26ce503c085f22f
-    icon: https://avatars.githubusercontent.com/u/55542927
-    name: centos-centos-simple-kmod
-    type: application
-    urls:
-    - file:///charts/example/centos-centos-simple-kmod-0.0.1.tgz
-    version: 0.0.1
   centos-simple-kmod:
   - apiVersion: v2
     appVersion: 1.0.0
-    created: "2021-06-17T17:49:12.797443981-04:00"
+    created: "2021-06-18T13:43:42.478781871-04:00"
     description: Simple kmod will deploy a simple kmod driver-container
-    digest: 41753fb6dec3edfc45207a11444c5649dd978906363b530783dbc27c0a65b8d1
+    digest: f934f3fde64e32e41461df846cf1c6231e22fbe0655d61cbeffd80a44d4a0ca2
     icon: https://avatars.githubusercontent.com/u/55542927
     name: centos-simple-kmod
     type: application
@@ -27,9 +15,9 @@ entries:
   ping-pong:
   - apiVersion: v2
     appVersion: 1.0.0
-    created: "2021-06-17T17:49:12.797827138-04:00"
+    created: "2021-06-18T13:43:42.479147713-04:00"
     description: Simple go app to showcase cert-manager intergration
-    digest: edd7d42908dcdcd18b3742f313914e8605846f7152359b897a6fb88daa0a2312
+    digest: ab43ea1c2267f8a76d33f7f776c942da8974f8eedbca5df78ff6acb7b6a203c8
     icon: https://avatars.githubusercontent.com/u/55542927
     name: ping-pong
     type: application
@@ -39,13 +27,13 @@ entries:
   simple-kmod:
   - apiVersion: v2
     appVersion: 1.0.0
-    created: "2021-06-17T17:49:12.797968769-04:00"
+    created: "2021-06-18T13:43:42.479294787-04:00"
     description: Simple kmod will deploy a simple kmod driver-container
-    digest: eca9a95d67cdc40bd6cc9c379f30e799685c4dcf68cc2aad66c4e73cc6d17f8c
+    digest: 6f25f5dac6e6a82967ceef20bdf2ec649664d4774c8ff24dc499903f026a9ca2
     icon: https://avatars.githubusercontent.com/u/55542927
     name: simple-kmod
     type: application
     urls:
     - file:///charts/example/simple-kmod-0.0.1.tgz
     version: 0.0.1
-generated: "2021-06-17T17:49:12.796974333-04:00"
+generated: "2021-06-18T13:43:42.47850047-04:00"

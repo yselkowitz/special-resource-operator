@@ -9,7 +9,6 @@ YAMLFILES        ?= $(shell  find manifests charts -name "*.yaml"  -not \( -path
 # To disable the creation of the ServiceMonitor in the case that
 # the Prometheus operator is not installed, set PROMETHEUS to a non-zero value
 PROMETHEUS ?= 0
-PROMETHEUS       ?= 0
 
 export PATH := go/bin:$(PATH)
 include Makefile.specialresource.mk
@@ -108,7 +107,7 @@ deploy: patch manifests
 # The specialresource finalizer will not execute either
 undeploy: kustomize
 	if [ ! -z "$$(kubectl get crd | grep specialresource)" ]; then         \
-		kubectl delete --ignore-not-found specialresource --all;                    \
+		kubectl delete --ignore-not-found sr --all;                    \
 	fi;
 	# Give SRO time to reconcile
 	sleep 10
@@ -123,13 +122,13 @@ manifests: manifests-gen kustomize configure
 	if [[ $(PROMETHEUS) == 0 ]]; then \
 		echo "Deployment expects Prometheus operator for ServiceMonitor"; \
 		sed -i 's/^#- ..\/prometheus/- ..\/prometheus/' config/default/kustomization.yaml; \
-		sed -i 's/^#patchesStrategicMerge:/patchesStrategicMerge:/' config/default/kustomization.yaml
-		sed -i 's/^#- manager_auth_proxy_patch.yaml:/- manager_auth_proxy_patch.yaml/' config/default/kustomization.yaml
+		sed -i 's/^#patchesStrategicMerge:/patchesStrategicMerge:/' config/default/kustomization.yaml; \
+		sed -i 's/^#- manager_auth_proxy_patch.yaml:/- manager_auth_proxy_patch.yaml/' config/default/kustomization.yaml; \
 	else \
 		echo "Disabling Prometheus ServiceMonitor"; \
 		sed -i 's/^- ..\/prometheus/#- ..\/prometheus/g' config/default/kustomization.yaml; \
-		sed -i 's/^patchesStrategicMerge:/#patchesStrategicMerge:/' config/default/kustomization.yaml
-		sed -i 's/^- manager_auth_proxy_patch.yaml:/#- manager_auth_proxy_patch.yaml/' config/default/kustomization.yaml
+		sed -i 's/^patchesStrategicMerge:/#patchesStrategicMerge:/' config/default/kustomization.yaml; \
+		sed -i 's/^- manager_auth_proxy_patch.yaml:/#- manager_auth_proxy_patch.yaml/' config/default/kustomization.yaml; \
 	fi;
 	cd $@; rm -f 00*
 	cd $@; $(KUSTOMIZE) build ../config/namespace | $(CSPLIT)
