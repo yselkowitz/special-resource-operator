@@ -10,7 +10,8 @@ spec:
       name: inaccel
       url: https://setup.inaccel.com/helm
   namespace: inaccel-fpga-operator
-  nodeSelector: feature.node.kubernetes.io/pci-1d0f.present=true
+  nodeSelector:
+    feature.node.kubernetes.io/pci-1d0f.present: "true"
 
   set:
     kind: Values
@@ -28,3 +29,9 @@ spec:
       # resources: ...
       tag: latest
       # nodeSelector: feature.node.kubernetes.io/pci-1d0f.present=true
+  dependencies:
+  - name: fpga-xrt-driver
+    version: 4.7.11
+    repository:
+      name: xilinx
+      url: file:///charts/xilinx

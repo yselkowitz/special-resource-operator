@@ -3,9 +3,9 @@ entries:
   ping-pong:
   - apiVersion: v2
     appVersion: 1.0.0
-    created: "2021-06-15T09:30:23.745762439Z"
+    created: "2021-06-16T12:59:02.179370647Z"
     description: Simple go app to showcase cert-manager intergration
-    digest: fed5f332a76ec2df03a2683e34f6400f1d2066b620d2d98ebae8274d1ad49924
+    digest: 4b494a7c63ac30766f391be9efbf039a51ff40dae28c235737a12850c1c243e2
     icon: https://avatars.githubusercontent.com/u/55542927
     name: ping-pong
     type: application
@@ -15,13 +15,13 @@ entries:
   simple-kmod:
   - apiVersion: v2
     appVersion: 1.0.0
-    created: "2021-06-15T09:30:23.745943773Z"
+    created: "2021-06-16T12:59:02.179560661Z"
     description: Simple kmod will deploy a simple kmod driver-container
-    digest: 66ce88b147fc6d51e167d2caa5904f1c120054e30a87d80f2cf8a1b3a2faa8c6
+    digest: bf912d409985103b95df5d2c90717a229fa60a23b25ef407da4b59e64a791b6e
     icon: https://avatars.githubusercontent.com/u/55542927
     name: simple-kmod
     type: application
     urls:
     - file:///charts/example/simple-kmod-0.0.1.tgz
     version: 0.0.1
-generated: "2021-06-15T09:30:23.745435742Z"
+generated: "2021-06-16T12:59:02.17906152Z"

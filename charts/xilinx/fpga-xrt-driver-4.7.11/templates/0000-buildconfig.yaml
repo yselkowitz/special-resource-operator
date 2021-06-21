@@ -38,7 +38,7 @@ spec:
         - name: KVER
           value: {{ .Values.kernelFullVersion }}
         - name: DRIVER_TOOLKIT
-          value: "quay.io/openshift-release-dev/ocp-v4.0-art-dev@sha256:e55e71960269793c1ff70b8934048bfb756ec93ce57f4268c749ab3b39c26cb3"
+          value: {{ .Values.driverToolkitImage  }}
   output:
     to:
       kind: ImageStreamTag
