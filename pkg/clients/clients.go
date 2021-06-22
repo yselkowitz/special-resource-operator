@@ -7,6 +7,10 @@ import (
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/openshift-psap/special-resource-operator/pkg/color"
 	clientconfigv1 "github.com/openshift/client-go/config/clientset/versioned/typed/config/v1"
+	"github.com/pkg/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
@@ -31,7 +35,7 @@ type ClientsInterface struct {
 
 func init() {
 
-	log = zap.New(zap.UseDevMode(true)).WithName(color.Print("exit", color.Red))
+	log = zap.New(zap.UseDevMode(true)).WithName(color.Print("clients", color.Brown))
 
 }
 
@@ -55,4 +59,37 @@ func GetConfigClientOrDie() clientconfigv1.ConfigV1Client {
 		os.Exit(1)
 	}
 	return *client
+}
+
+func HasResource(resource schema.GroupVersionResource) (bool, error) {
+	dclient, err := discovery.NewDiscoveryClientForConfig(RestConfig)
+	if err != nil {
+		return false, errors.Wrap(err, "Error: cannot retrieve a DiscoveryClient")
+	}
+	if dclient == nil {
+		log.Info("Cannot retrieve DiscoveryClient, assuming vanilla k8s")
+		return false, nil
+	}
+
+	resources, err := dclient.ServerResourcesForGroupVersion(resource.GroupVersion().String())
+	if apierrors.IsNotFound(err) {
+		// entire group is missing
+		log.Info("Assuming Vanilla k8s, could not find resource", "serverResource:", resource.Resource)
+		return false, nil
+	}
+	if err != nil {
+		log.Info("Error while querying ServerResources, assuming we're on Vanilla Kubernetes")
+		return false, errors.Wrap(err, "cannot query ServerResources")
+	} else {
+		for _, serverResource := range resources.APIResources {
+			log.Info("serverResource", "name", serverResource.Name)
+			if serverResource.Name == resource.Resource {
+				log.Info("Found serverResource", "name", serverResource.Name)
+				return true, nil
+			}
+		}
+	}
+
+	log.Info("Assuming Vanilla k8s, could not find resource", "serverResource:", resource.Resource)
+	return false, nil
 }

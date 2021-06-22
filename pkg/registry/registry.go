@@ -13,7 +13,6 @@ import (
 	"github.com/google/go-containerregistry/pkg/authn/k8schain"
 	"github.com/google/go-containerregistry/pkg/crane"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
-	"github.com/openshift-psap/special-resource-operator/pkg/cluster"
 	"github.com/openshift-psap/special-resource-operator/pkg/color"
 	"github.com/openshift-psap/special-resource-operator/pkg/exit"
 	"github.com/openshift-psap/special-resource-operator/pkg/warn"
@@ -38,7 +37,11 @@ func init() {
 			"pull-secret",
 		},
 	})
-	cluster.WarnOnK8sFailOnOCP(err, "cluster pull-secret not found")
+	if err != nil {
+		log.Info("Fatal for OCP: cluster pull-secret not found. Can be ignored on vanilla k8s")
+	}
+	// Does not work because restConfig not init
+	//WarnOnK8sFailOnOCP(err, "cluster pull-secret not found")
 }
 
 type DriverToolkitEntry struct {

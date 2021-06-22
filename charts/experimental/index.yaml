@@ -3,13 +3,13 @@ entries:
   simple-kmod:
   - apiVersion: v2
     appVersion: 1.0.0
-    created: "2021-06-18T13:43:42.537524778-04:00"
+    created: "2021-06-21T19:57:03.649081147-04:00"
     description: Simple kmod will deploy a simple kmod driver-container
-    digest: a44a4b23cc367107b84d3cf368f44ce2d287db64d022625b0cf555bdab57268b
+    digest: 8970979aef7e360d636fabcbea1835685c8c83938e12921cd678f3e006b3bfe5
     icon: https://avatars.githubusercontent.com/u/55542927
     name: simple-kmod
     type: application
     urls:
     - file:///charts/experimental/simple-kmod-0.0.1.tgz
     version: 0.0.1
-generated: "2021-06-18T13:43:42.537252511-04:00"
+generated: "2021-06-21T19:57:03.648824353-04:00"

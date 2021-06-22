@@ -11,7 +11,9 @@ import (
 	"github.com/openshift-psap/special-resource-operator/pkg/color"
 	"github.com/openshift-psap/special-resource-operator/pkg/exit"
 	"github.com/openshift-psap/special-resource-operator/pkg/osversion"
+	buildv1 "github.com/openshift/api/build/v1"
 	"github.com/pkg/errors"
+
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -25,21 +27,6 @@ var (
 
 func init() {
 	log = zap.New(zap.UseDevMode(true)).WithName(color.Print("cache", color.Brown))
-}
-
-func OnOCP() bool {
-	var found bool
-	// Assuming all nodes are running the same openshift version
-	for _, node := range cache.Node.List.Items {
-		labels := node.GetLabels()
-
-		// Check if there is a label from NFD for OPENSHIFT_VERSION
-		key := "feature.node.kubernetes.io/system-os_release.OPENSHIFT_VERSION"
-		_, found := labels[key]
-		return found
-	}
-
-	return found
 }
 
 func Version() (string, string, error) {
@@ -127,6 +114,23 @@ func OperatingSystem() (string, string, string, error) {
 	}
 
 	return osversion.RenderOperatingSystem(nodeOSrel, nodeOSmaj, nodeOSmin)
+}
+
+func OnOCP() bool {
+	var found bool
+	// Assuming all nodes are running the same openshift version
+	//for _, node := range cache.Node.List.Items {
+	//	labels := node.GetLabels()
+	//
+	// Check if there is a label from NFD for OPENSHIFT_VERSION
+	//	key := "feature.node.kubernetes.io/system-os_release.OPENSHIFT_VERSION"
+	//	_, found := labels[key]
+	//	return found
+	//}
+	found, _ = clients.HasResource(buildv1.SchemeGroupVersion.WithResource("buildconfigs"))
+
+	return found
+
 }
 
 func WarnOnK8sFailOnOCP(err error, message string) {

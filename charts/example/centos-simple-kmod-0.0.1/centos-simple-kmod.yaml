@@ -13,7 +13,8 @@ spec:
       name: example
       url: file:///charts/example
   set:
-    pull_secret_creds: "pull" # pull secret .dockerconfigjson value. Should be a robot account
+    pull_secret_creds: "pullsecret" # pull secret .dockerconfigjson value. Should be a robot account
+    image_repo: "quay.io/dagray/centos8-simple-kmod"
     kind: Values
     apiVersion: sro.openshift.io/v1beta1
     kmodNames: ["simple-kmod", "simple-procfs-kmod"]

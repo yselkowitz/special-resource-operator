@@ -38,6 +38,6 @@ resources:
 - ../crd
 - ../rbac
 - ../manager
-- ../clusteroperator
+  #- ../clusteroperator
 #- ../prometheus
 namespace: openshift-special-resource-operator

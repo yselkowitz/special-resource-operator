@@ -3,9 +3,9 @@ entries:
   centos-simple-kmod:
   - apiVersion: v2
     appVersion: 1.0.0
-    created: "2021-06-18T13:43:42.478781871-04:00"
+    created: "2021-06-21T19:57:03.591833754-04:00"
     description: Simple kmod will deploy a simple kmod driver-container
-    digest: f934f3fde64e32e41461df846cf1c6231e22fbe0655d61cbeffd80a44d4a0ca2
+    digest: 3eaac22a94adab4afcb8b3b54d80ad1deb0e9842e0ae9257fe803af3fbe8ddd4
     icon: https://avatars.githubusercontent.com/u/55542927
     name: centos-simple-kmod
     type: application
@@ -15,9 +15,9 @@ entries:
   ping-pong:
   - apiVersion: v2
     appVersion: 1.0.0
-    created: "2021-06-18T13:43:42.479147713-04:00"
+    created: "2021-06-21T19:57:03.592248002-04:00"
     description: Simple go app to showcase cert-manager intergration
-    digest: ab43ea1c2267f8a76d33f7f776c942da8974f8eedbca5df78ff6acb7b6a203c8
+    digest: f3d9f9538ea0f6a2ebdcfaa49d541fbe605599e2978eb13b25b45ed470cf8b87
     icon: https://avatars.githubusercontent.com/u/55542927
     name: ping-pong
     type: application
@@ -27,13 +27,13 @@ entries:
   simple-kmod:
   - apiVersion: v2
     appVersion: 1.0.0
-    created: "2021-06-18T13:43:42.479294787-04:00"
+    created: "2021-06-21T19:57:03.59240747-04:00"
     description: Simple kmod will deploy a simple kmod driver-container
-    digest: 6f25f5dac6e6a82967ceef20bdf2ec649664d4774c8ff24dc499903f026a9ca2
+    digest: 5520bf9ff850f0c5d1b0d5d735c2f1da4edab303c76b511208e3d49119507f4d
     icon: https://avatars.githubusercontent.com/u/55542927
     name: simple-kmod
     type: application
     urls:
     - file:///charts/example/simple-kmod-0.0.1.tgz
     version: 0.0.1
-generated: "2021-06-18T13:43:42.47850047-04:00"
+generated: "2021-06-21T19:57:03.59095003-04:00"
