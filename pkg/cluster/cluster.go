@@ -2,7 +2,6 @@ package cluster
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
 	"github.com/go-logr/logr"
@@ -11,7 +10,9 @@ import (
 	"github.com/openshift-psap/special-resource-operator/pkg/color"
 	"github.com/openshift-psap/special-resource-operator/pkg/exit"
 	"github.com/openshift-psap/special-resource-operator/pkg/osversion"
-	buildv1 "github.com/openshift/api/build/v1"
+	configv1 "github.com/openshift/api/config/v1"
+	machinev1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
+
 	"github.com/pkg/errors"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -30,6 +31,10 @@ func init() {
 }
 
 func Version() (string, string, error) {
+
+	if !ClusterVersionAvailable() {
+		return "", "", nil
+	}
 
 	version, err := clients.Interface.ClusterVersions().Get(context.TODO(), "version", metav1.GetOptions{})
 	if err != nil {
@@ -59,6 +64,11 @@ func Version() (string, string, error) {
 func VersionHistory() ([]string, error) {
 
 	stat := []string{}
+
+	if !ClusterVersionAvailable() {
+		return stat, nil
+	}
+
 	version, err := clients.Interface.ClusterVersions().Get(context.TODO(), "version", metav1.GetOptions{})
 	if err != nil {
 		return stat, errors.Wrap(err, "ConfigClient unable to get ClusterVersions")
@@ -77,12 +87,21 @@ func VersionHistory() ([]string, error) {
 
 func OSImageURL() (string, error) {
 
+	machineConfigAvailable, err := clients.HasResource(machinev1.SchemeGroupVersion.WithResource("proxies"))
+	if err != nil {
+		return "", errors.Wrap(err, "Error discovering machineconfig API resource")
+	}
+	if !machineConfigAvailable {
+		log.Info("Warning: Could not find machineconfig API resource. Can be ignored on vanilla k8s.")
+		return "", nil
+	}
+
 	cm := &unstructured.Unstructured{}
 	cm.SetAPIVersion("v1")
 	cm.SetKind("ConfigMap")
 
 	namespacedName := types.NamespacedName{Namespace: "openshift-machine-config-operator", Name: "machine-config-osimageurl"}
-	err := clients.Interface.Get(context.TODO(), namespacedName, cm)
+	err = clients.Interface.Get(context.TODO(), namespacedName, cm)
 	if apierrors.IsNotFound(err) {
 		return "", errors.Wrap(err, "ConfigMap machine-config-osimageurl -n  openshift-machine-config-operator not found")
 	}
@@ -116,29 +135,15 @@ func OperatingSystem() (string, string, string, error) {
 	return osversion.RenderOperatingSystem(nodeOSrel, nodeOSmaj, nodeOSmin)
 }
 
-func OnOCP() bool {
-	var found bool
-	// Assuming all nodes are running the same openshift version
-	//for _, node := range cache.Node.List.Items {
-	//	labels := node.GetLabels()
-	//
-	// Check if there is a label from NFD for OPENSHIFT_VERSION
-	//	key := "feature.node.kubernetes.io/system-os_release.OPENSHIFT_VERSION"
-	//	_, found := labels[key]
-	//	return found
-	//}
-	found, _ = clients.HasResource(buildv1.SchemeGroupVersion.WithResource("buildconfigs"))
+func ClusterVersionAvailable() bool {
 
-	return found
-
-}
-
-func WarnOnK8sFailOnOCP(err error, message string) {
+	clusterVersionAvailable, err := clients.HasResource(configv1.SchemeGroupVersion.WithResource("clusterversions"))
 	if err != nil {
-		if OnOCP() == true {
-			exit.OnError(errors.Wrap(err, message))
-		} else {
-			log.Info(fmt.Sprintf("Warning: %s. If running in vanilla k8s this can be ignored", message))
-		}
+		exit.OnError(err)
 	}
+	if !clusterVersionAvailable {
+		log.Info("Warning: ClusterVersion API resource not available. Can be ignored on vanilla k8s.")
+		return false
+	}
+	return true
 }

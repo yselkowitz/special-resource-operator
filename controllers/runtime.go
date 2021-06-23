@@ -33,7 +33,6 @@ type ResourceGroupName struct {
 }
 
 type RuntimeInformation struct {
-	OnOCP                     bool                           `json:"onOCP"`
 	OperatingSystemMajor      string                         `json:"operatingSystemMajor"`
 	OperatingSystemMajorMinor string                         `json:"operatingSystemMajorMinor"`
 	OperatingSystemDecimal    string                         `json:"operatingSystemDecimal"`
@@ -52,7 +51,6 @@ type RuntimeInformation struct {
 }
 
 var RunInfo = RuntimeInformation{
-	OnOCP:                     true,
 	OperatingSystemMajor:      "",
 	OperatingSystemMajorMinor: "",
 	OperatingSystemDecimal:    "",
@@ -79,7 +77,6 @@ var RunInfo = RuntimeInformation{
 }
 
 func logRuntimeInformation() {
-	log.Info("Runtime Information", "OnOCP", RunInfo.OnOCP)
 	log.Info("Runtime Information", "OperatingSystemMajor", RunInfo.OperatingSystemMajor)
 	log.Info("Runtime Information", "OperatingSystemMajorMinor", RunInfo.OperatingSystemMajorMinor)
 	log.Info("Runtime Information", "OperatingSystemDecimal", RunInfo.OperatingSystemDecimal)
@@ -102,8 +99,6 @@ func getRuntimeInformation(r *SpecialResourceReconciler) {
 	err = cache.Nodes(r.specialresource.Spec.NodeSelector, false)
 	exit.OnError(errors.Wrap(err, "Failed to cache nodes"))
 
-	RunInfo.OnOCP = cluster.OnOCP()
-
 	RunInfo.OperatingSystemMajor, RunInfo.OperatingSystemMajorMinor, RunInfo.OperatingSystemDecimal, err = cluster.OperatingSystem()
 	exit.OnError(errors.Wrap(err, "Failed to get operating system"))
 
@@ -114,19 +109,19 @@ func getRuntimeInformation(r *SpecialResourceReconciler) {
 	exit.OnError(errors.Wrap(err, "Failed to get kernel patch version"))
 
 	RunInfo.ClusterVersion, RunInfo.ClusterVersionMajorMinor, err = cluster.Version()
-	cluster.WarnOnK8sFailOnOCP(err, "Failed to get cluster version")
+	exit.OnError(errors.Wrap(err, "Failed to get cluster version"))
 
 	RunInfo.ClusterUpgradeInfo, err = upgrade.ClusterInfo()
 	exit.OnError(errors.Wrap(err, "Failed to get upgrade info"))
 
 	RunInfo.PushSecretName, err = retryGetPushSecretName(r)
-	cluster.WarnOnK8sFailOnOCP(err, "Failed to get push secret name")
+	exit.OnError(errors.Wrap(err, "Failed to get push secret name"))
 
 	RunInfo.OSImageURL, err = cluster.OSImageURL()
-	cluster.WarnOnK8sFailOnOCP(err, "Failed to get OSImageURL")
+	exit.OnError(errors.Wrap(err, "Failed to get OSImageURL"))
 
 	RunInfo.Proxy, err = proxy.ClusterConfiguration()
-	cluster.WarnOnK8sFailOnOCP(err, "Failed to get Proxy Configuration")
+	exit.OnError(errors.Wrap(err, "Failed to get Proxy Configuration"))
 
 	r.specialresource.DeepCopyInto(&RunInfo.SpecialResource)
 }
@@ -149,6 +144,15 @@ func retryGetPushSecretName(r *SpecialResourceReconciler) (string, error) {
 
 func getPushSecretName(r *SpecialResourceReconciler) (string, error) {
 
+	onOCP, err := clients.BuildConfigsAvailable()
+	if err != nil {
+		return "", errors.Wrap(err, "Error checking for BuildConfig API resource")
+	}
+	if !onOCP {
+		log.Info("BuildConfigs not found, assuming vanilla k8s.")
+		return "", nil
+	}
+
 	secrets := &unstructured.UnstructuredList{}
 
 	secrets.SetAPIVersion("v1")
@@ -158,7 +162,7 @@ func getPushSecretName(r *SpecialResourceReconciler) (string, error) {
 	opts := []client.ListOption{
 		client.InNamespace(r.specialresource.Spec.Namespace),
 	}
-	err := clients.Interface.List(context.TODO(), secrets, opts...)
+	err = clients.Interface.List(context.TODO(), secrets, opts...)
 	if err != nil {
 		return "", errors.Wrap(err, "Client cannot get SecretList")
 	}

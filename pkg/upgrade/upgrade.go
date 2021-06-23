@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-logr/logr"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+
 	"github.com/openshift-psap/special-resource-operator/pkg/cache"
 	"github.com/openshift-psap/special-resource-operator/pkg/cluster"
 	"github.com/openshift-psap/special-resource-operator/pkg/color"
@@ -37,12 +38,13 @@ func ClusterInfo() (map[string]NodeVersion, error) {
 	exit.OnError(errors.Wrap(err, "Failed to get upgrade info"))
 
 	history, err := cluster.VersionHistory()
-	cluster.WarnOnK8sFailOnOCP(err, "Could not get version history")
+	exit.OnError(errors.Wrap(err, "Could not get version history"))
 
 	versions, err := DriverToolkitVersion(history, info)
 	exit.OnError(err)
 
 	return versions, nil
+
 }
 
 func NodeVersionInfo() (map[string]NodeVersion, error) {
@@ -58,8 +60,6 @@ func NodeVersionInfo() (map[string]NodeVersion, error) {
 		var kernelFullVersion string
 		var clusterVersion string
 
-		onOCP := cluster.OnOCP()
-
 		labels := node.GetLabels()
 		// We only need to check for the key, the value
 		// is available if the key is there
@@ -69,8 +69,8 @@ func NodeVersionInfo() (map[string]NodeVersion, error) {
 		}
 
 		short = "feature.node.kubernetes.io/system-os_release.RHEL_VERSION"
-		if rhelVersion, found = labels[short]; !found && onOCP {
-			return nil, errors.New("Label " + short + " not found is NFD running? Check node labels")
+		if rhelVersion, found = labels[short]; !found {
+			log.Info("Warning: Label " + short + " not found. Can be ignored on vanilla k8s")
 		}
 
 		short = "feature.node.kubernetes.io/system-os_release.VERSION_ID"

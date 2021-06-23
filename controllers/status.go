@@ -154,13 +154,13 @@ func (r *SpecialResourceReconciler) clusterOperatorUpdateRelatedObjects() error 
 func SpecialResourcesStatus(r *SpecialResourceReconciler, req ctrl.Request, cond []configv1.ClusterOperatorStatusCondition) (ctrl.Result, error) {
 	log = r.Log.WithName(color.Print("status", color.Blue))
 
-	hasClusterOperator, err := clients.HasResource(configv1.SchemeGroupVersion.WithResource("clusteroperators"))
+	clusterOperatorAvailable, err := clients.HasResource(configv1.SchemeGroupVersion.WithResource("clusteroperators"))
 
 	if err != nil {
 		return reconcile.Result{Requeue: true}, errors.Wrap(err, "Cannot discover ClusterOperator api resource")
 	}
 
-	if hasClusterOperator {
+	if clusterOperatorAvailable {
 		// If clusterOperator CRD does not exist, warn and return nil,
 		if err := r.clusterOperatorStatusGetOrCreate(); err != nil {
 			return reconcile.Result{Requeue: true}, errors.Wrap(err, "Cannot get or create ClusterOperator")
@@ -170,6 +170,8 @@ func SpecialResourcesStatus(r *SpecialResourceReconciler, req ctrl.Request, cond
 		if err := r.clusterOperatorStatusReconcile(cond); err != nil {
 			return reconcile.Result{Requeue: true}, errors.Wrap(err, "Reconciling ClusterOperator failed")
 		}
+	} else {
+		log.Info("Warning: ClusterOperator resource not available. Can be ignored on vanilla k8s.")
 	}
 
 	return reconcile.Result{}, nil

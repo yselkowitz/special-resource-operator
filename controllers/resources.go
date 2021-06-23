@@ -9,7 +9,6 @@ import (
 	"github.com/openshift-psap/special-resource-operator/pkg/assets"
 	"github.com/openshift-psap/special-resource-operator/pkg/cache"
 	"github.com/openshift-psap/special-resource-operator/pkg/clients"
-	"github.com/openshift-psap/special-resource-operator/pkg/cluster"
 	"github.com/openshift-psap/special-resource-operator/pkg/exit"
 	"github.com/openshift-psap/special-resource-operator/pkg/filter"
 	"github.com/openshift-psap/special-resource-operator/pkg/hash"
@@ -25,6 +24,7 @@ import (
 	"helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/chartutil"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -51,6 +51,14 @@ func getChartTemplates(r *SpecialResourceReconciler) (*unstructured.Unstructured
 
 func createImagePullerRoleBinding(r *SpecialResourceReconciler) error {
 
+	_, err := clients.Interface.RbacV1().ClusterRoles().Get(context.TODO(), "system:image-puller", metav1.GetOptions{})
+	if apierrors.IsNotFound(err) {
+		log.Info("Warning: ClusterRole system:image-puller not found. Can be ignored on vanilla k8s.")
+		return nil
+	} else if err != nil {
+		return errors.Wrap(err, "Error checking for image-puller clusterRole")
+	}
+
 	if found := slice.Contains(r.dependency.Tags, "image-puller"); !found {
 		log.Info("dep", "ImagePuller", found)
 	}
@@ -61,7 +69,7 @@ func createImagePullerRoleBinding(r *SpecialResourceReconciler) error {
 	rb.SetKind("RoleBinding")
 
 	namespacedName := types.NamespacedName{Namespace: r.specialresource.Spec.Namespace, Name: "system:image-puller"}
-	err := clients.Interface.Get(context.TODO(), namespacedName, rb)
+	err = clients.Interface.Get(context.TODO(), namespacedName, rb)
 
 	newSubject := make(map[string]interface{})
 	newSubjects := make([]interface{}, 0)
@@ -316,7 +324,7 @@ func ReconcileChart(r *SpecialResourceReconciler) error {
 	// specialresource name == namespace if not metadata.namespace is set
 	createSpecialResourceNamespace(r)
 	if err := createImagePullerRoleBinding(r); err != nil {
-		cluster.WarnOnK8sFailOnOCP(err, "Could not create ImagePuller RoleBinding")
+		return errors.Wrap(err, "Could not create ImagePuller RoleBinding")
 	}
 
 	// Check if we have a ConfigMap deployed in the specialresrouce

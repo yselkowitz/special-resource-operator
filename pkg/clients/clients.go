@@ -6,7 +6,9 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/openshift-psap/special-resource-operator/pkg/color"
+	buildv1 "github.com/openshift/api/build/v1"
 	clientconfigv1 "github.com/openshift/client-go/config/clientset/versioned/typed/config/v1"
+
 	"github.com/pkg/errors"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -67,29 +69,33 @@ func HasResource(resource schema.GroupVersionResource) (bool, error) {
 		return false, errors.Wrap(err, "Error: cannot retrieve a DiscoveryClient")
 	}
 	if dclient == nil {
-		log.Info("Cannot retrieve DiscoveryClient, assuming vanilla k8s")
+		log.Info("Warning: cannot retrieve DiscoveryClient. Assuming vanilla k8s")
 		return false, nil
 	}
 
 	resources, err := dclient.ServerResourcesForGroupVersion(resource.GroupVersion().String())
 	if apierrors.IsNotFound(err) {
 		// entire group is missing
-		log.Info("Assuming Vanilla k8s, could not find resource", "serverResource:", resource.Resource)
 		return false, nil
 	}
 	if err != nil {
-		log.Info("Error while querying ServerResources, assuming we're on Vanilla Kubernetes")
-		return false, errors.Wrap(err, "cannot query ServerResources")
+		log.Info("Error while querying ServerResources")
+		return false, errors.Wrap(err, "Cannot query ServerResources")
 	} else {
 		for _, serverResource := range resources.APIResources {
-			log.Info("serverResource", "name", serverResource.Name)
 			if serverResource.Name == resource.Resource {
-				log.Info("Found serverResource", "name", serverResource.Name)
+				//Found it
 				return true, nil
 			}
 		}
 	}
 
-	log.Info("Assuming Vanilla k8s, could not find resource", "serverResource:", resource.Resource)
+	log.Info("Could not find resource", "serverResource:", resource.Resource)
 	return false, nil
+}
+
+func BuildConfigsAvailable() (bool, error) {
+
+	return HasResource(buildv1.SchemeGroupVersion.WithResource("buildconfigs"))
+
 }

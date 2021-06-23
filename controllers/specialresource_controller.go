@@ -22,7 +22,7 @@ import (
 
 	"github.com/go-logr/logr"
 	srov1beta1 "github.com/openshift-psap/special-resource-operator/api/v1beta1"
-	"github.com/openshift-psap/special-resource-operator/pkg/cluster"
+	"github.com/openshift-psap/special-resource-operator/pkg/clients"
 	"github.com/openshift-psap/special-resource-operator/pkg/color"
 	"github.com/openshift-psap/special-resource-operator/pkg/conditions"
 	"github.com/openshift-psap/special-resource-operator/pkg/filter"
@@ -106,7 +106,14 @@ func (r *SpecialResourceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 // SetupWithManager main initalization for manager
 func (r *SpecialResourceReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	if cluster.OnOCP() {
+	log = r.Log.WithName(color.Print("setup", color.Brown))
+	buildConfigsAvailable, err := clients.BuildConfigsAvailable()
+
+	if err != nil {
+		return errors.Wrap(err, "Unexpected error checking if BuildConfig API resource is available.")
+	}
+
+	if buildConfigsAvailable {
 		return ctrl.NewControllerManagedBy(mgr).
 			For(&srov1beta1.SpecialResource{}).
 			Owns(&v1.Pod{}).
@@ -129,6 +136,7 @@ func (r *SpecialResourceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			WithEventFilter(filter.Predicate()).
 			Complete(r)
 	} else {
+		log.Info("Warning: could not find buildConfigs resource assuming vanilla k8s. Manager will own a limited set of resourcs. ")
 		return ctrl.NewControllerManagedBy(mgr).
 			For(&srov1beta1.SpecialResource{}).
 			Owns(&v1.Pod{}).
