@@ -25,8 +25,8 @@ spec:
     - type: "ImageChange"
   source:
     git:
-      ref: {{.Values.specialresource.spec.driverContainer.source.git.ref}}
-      uri: {{.Values.specialresource.spec.driverContainer.source.git.uri}}
+      ref: {{.Values.specialresource.spec.build.source.git.ref}}
+      uri: {{.Values.specialresource.spec.build.source.git.uri}}
     type: Git
   strategy:
     dockerStrategy:
