@@ -34,86 +34,8 @@ spec:
           spec:
             description: SpecialResourceSpec defines the desired state of SpecialResource
             properties:
-              chart:
-                properties:
-                  name:
-                    type: string
-                  repository:
-                    properties:
-                      caFile:
-                        type: string
-                      certFile:
-                        type: string
-                      insecure_skip_tls_verify:
-                        default: false
-                        type: boolean
-                      keyFile:
-                        type: string
-                      name:
-                        type: string
-                      password:
-                        type: string
-                      url:
-                        type: string
-                      username:
-                        type: string
-                    required:
-                    - name
-                    - url
-                    type: object
-                  tags:
-                    items:
-                      type: string
-                    type: array
-                  version:
-                    type: string
-                required:
-                - name
-                - repository
-                - version
-                type: object
-              dependencies:
-                items:
-                  properties:
-                    name:
-                      type: string
-                    repository:
-                      properties:
-                        caFile:
-                          type: string
-                        certFile:
-                          type: string
-                        insecure_skip_tls_verify:
-                          default: false
-                          type: boolean
-                        keyFile:
-                          type: string
-                        name:
-                          type: string
-                        password:
-                          type: string
-                        url:
-                          type: string
-                        username:
-                          type: string
-                      required:
-                      - name
-                      - url
-                      type: object
-                    tags:
-                      items:
-                        type: string
-                      type: array
-                    version:
-                      type: string
-                  required:
-                  - name
-                  - repository
-                  - version
-                  type: object
-                type: array
-              driverContainer:
-                description: SpecialResourceDriverContainer defines the desired state of SpecialResource
+              build:
+                description: SpecialResourceBuild defines the desired state of SpecialResource
                 properties:
                   artifacts:
                     description: SpecialResourceArtifacts defines the observed state of SpecialResource
@@ -194,6 +116,92 @@ spec:
                         type: object
                     type: object
                 type: object
+              chart:
+                properties:
+                  name:
+                    type: string
+                  repository:
+                    properties:
+                      caFile:
+                        type: string
+                      certFile:
+                        type: string
+                      insecure_skip_tls_verify:
+                        default: false
+                        type: boolean
+                      keyFile:
+                        type: string
+                      name:
+                        type: string
+                      password:
+                        type: string
+                      url:
+                        type: string
+                      username:
+                        type: string
+                    required:
+                    - name
+                    - url
+                    type: object
+                  tags:
+                    items:
+                      type: string
+                    type: array
+                  version:
+                    type: string
+                required:
+                - name
+                - repository
+                - version
+                type: object
+              dependencies:
+                items:
+                  description: SpecialResourceDependency a dependent helm chart
+                  properties:
+                    chart:
+                      properties:
+                        name:
+                          type: string
+                        repository:
+                          properties:
+                            caFile:
+                              type: string
+                            certFile:
+                              type: string
+                            insecure_skip_tls_verify:
+                              default: false
+                              type: boolean
+                            keyFile:
+                              type: string
+                            name:
+                              type: string
+                            password:
+                              type: string
+                            url:
+                              type: string
+                            username:
+                              type: string
+                          required:
+                          - name
+                          - url
+                          type: object
+                        tags:
+                          items:
+                            type: string
+                          type: array
+                        version:
+                          type: string
+                      required:
+                      - name
+                      - repository
+                      - version
+                      type: object
+                    set:
+                      type: object
+                      x-kubernetes-embedded-resource: true
+                      x-kubernetes-preserve-unknown-fields: true
+                  type: object
+                type: array
               forceUpgrade:
                 type: boolean
               namespace:

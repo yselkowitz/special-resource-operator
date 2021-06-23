@@ -1,5 +1,18 @@
 # How to build recipes
 
+The Special Resource Operatore (SRO) is based on Helm charts. A Helm chart is a recipe
+to build a special resource. The integrated Helm support in SRO can use chart repositories
+either via HTTP, OCI or file:///.
+
+Most of the time the charts are packaged with SRO. In this way we have tested SRO recipes
+for each K8S or OpenShift release.
+
+
+
+
+
+
+
 ## Runtime Variables
 
 ```yaml

@@ -76,8 +76,8 @@ type SpecialResourceSource struct {
 	Git SpecialResourceGit `json:"git,omitempty"`
 }
 
-// SpecialResourceDriverContainer defines the desired state of SpecialResource
-type SpecialResourceDriverContainer struct {
+// SpecialResourceBuild defines the desired state of SpecialResource
+type SpecialResourceBuild struct {
 	// +kubebuilder:validation:Optional
 	Source SpecialResourceSource `json:"source,omitempty"`
 	// +kubebuilder:validation:Optional
@@ -97,11 +97,20 @@ type SpecialResourceSpec struct {
 	// +kubebuilder:validation:EmbeddedResource
 	Set unstructured.Unstructured `json:"set,omitempty"`
 	// +kubebuilder:validation:Optional
-	DriverContainer SpecialResourceDriverContainer `json:"driverContainer,omitempty"`
+	Build SpecialResourceBuild `json:"build,omitempty"`
 	// +kubebuilder:validation:Optional
 	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
 	// +kubebuilder:validation:Optional
-	Dependencies []helmer.HelmChart `json:"dependencies"`
+	Dependencies []SpecialResourceDependency `json:"dependencies"`
+}
+
+// SpecialResourceDependency a dependent helm chart
+type SpecialResourceDependency struct {
+	helmer.HelmChart `json:"chart,omitempty"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:pruning:PreserveUnknownFields
+	// +kubebuilder:validation:EmbeddedResource
+	Set unstructured.Unstructured `json:"set,omitempty"`
 }
 
 // SpecialResourceStatus defines the observed state of SpecialResource
