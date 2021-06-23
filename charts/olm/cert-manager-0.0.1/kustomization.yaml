@@ -6,10 +6,9 @@ generatorOptions:
 
 configMapGenerator:
 - files:
-  - 0001_secret.yaml
-  - 0002_issuer.yaml
-  - 0003_certificates.yaml
-  - 0004_server.yaml
-  - 0005_client.yaml
+  - 0000_namespace.yaml 
+  - 0001_operatorgroup.yaml
+  - 0002_subscription.yaml
+  - 0003_cr.yaml 
   name: ping-pong
 namespace: ping-pong
