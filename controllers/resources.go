@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"context"
-	"fmt"
 	"sort"
 	"strings"
 
@@ -20,7 +19,6 @@ import (
 	"github.com/openshift-psap/special-resource-operator/pkg/slice"
 	"github.com/openshift-psap/special-resource-operator/pkg/state"
 	"github.com/openshift-psap/special-resource-operator/pkg/upgrade"
-	"github.com/openshift-psap/special-resource-operator/pkg/warn"
 	"github.com/openshift-psap/special-resource-operator/pkg/yamlutil"
 	"github.com/pkg/errors"
 	"helm.sh/helm/v3/pkg/chart"
@@ -431,6 +429,13 @@ func CRUD(obj *unstructured.Unstructured, r *SpecialResourceReconciler) error {
 		logger = log.WithValues("Kind", obj.GetKind()+": "+obj.GetName())
 	}
 
+	// SpecialResource is the parent, all other objects are childs and need a reference
+	// but only set the ownerreference if created by SRO do not set ownerreference per default
+	if obj.GetKind() != "SpecialResource" || obj.GetKind() != "Namespace" {
+		err := controllerutil.SetControllerReference(&r.specialresource, obj, r.Scheme)
+		exit.OnError(err)
+	}
+
 	found := obj.DeepCopy()
 
 	err := clients.Interface.Get(context.TODO(), types.NamespacedName{Namespace: obj.GetNamespace(), Name: obj.GetName()}, found)
@@ -440,12 +445,9 @@ func CRUD(obj *unstructured.Unstructured, r *SpecialResourceReconciler) error {
 
 		hash.Annotate(obj)
 
-		// SpecialResource is the parent, all other objects are childs and need a reference
-		// but only set the ownerreference if created by SRO do not set ownerreference per default
-		if obj.GetKind() != "SpecialResource" {
-			err := controllerutil.SetControllerReference(&r.specialresource, obj, r.Scheme)
-			exit.OnError(err)
-		}
+		// If we create the resource set the owner reference
+		err := controllerutil.SetControllerReference(&r.specialresource, obj, r.Scheme)
+		exit.OnError(err)
 
 		if err := clients.Interface.Create(context.TODO(), obj); err != nil {
 			if apierrors.IsForbidden(err) {
@@ -463,22 +465,6 @@ func CRUD(obj *unstructured.Unstructured, r *SpecialResourceReconciler) error {
 
 	if err != nil {
 		return errors.Wrap(err, "Unexpected error")
-	}
-
-	// SpecialResource is the parent, all other objects are childs and need a reference
-	// but only set the ownerreference if created by SRO do not set ownerreference per default
-	if found.GetKind() != "SpecialResource" {
-		owners := found.GetOwnerReferences()
-		if len(owners) == 0 {
-			log.Info("No owner set still updating, since we should own", "resource", found.GetName())
-		}
-		for _, owner := range owners {
-			if owner.Kind != "SpecialResource" {
-				msg := fmt.Sprintf("We should own: %s resources but it has another owner: %+v", found.GetName(), owner)
-				warn.OnError(errors.New(msg))
-			}
-		}
-
 	}
 
 	// Not updating Pod because we can only update image and some other

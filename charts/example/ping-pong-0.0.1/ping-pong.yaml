@@ -20,8 +20,8 @@ spec:
     serverArgs:
       caFile: "-ca-file=/etc/ping-pong/certs/ca.crt"
       keyFile: "-key-file=/etc/ping-pong/certs/tls.key"
-      cetFile: "-cert-file=/etc/ping-pong/certs/tls.crt"
-  build:
+      certFile: "-cert-file=/etc/ping-pong/certs/tls.crt"
+  driverContainer:
     source:
       git:
         ref: "master"

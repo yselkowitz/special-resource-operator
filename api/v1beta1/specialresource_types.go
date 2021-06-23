@@ -76,8 +76,8 @@ type SpecialResourceSource struct {
 	Git SpecialResourceGit `json:"git,omitempty"`
 }
 
-// SpecialResourceBuild defines the desired state of SpecialResource
-type SpecialResourceBuild struct {
+// SpecialResourceDriverContainer defines the desired state of SpecialResource
+type SpecialResourceDriverContainer struct {
 	// +kubebuilder:validation:Optional
 	Source SpecialResourceSource `json:"source,omitempty"`
 	// +kubebuilder:validation:Optional
@@ -97,7 +97,7 @@ type SpecialResourceSpec struct {
 	// +kubebuilder:validation:EmbeddedResource
 	Set unstructured.Unstructured `json:"set,omitempty"`
 	// +kubebuilder:validation:Optional
-	Build SpecialResourceBuild `json:"build,omitempty"`
+	DriverContainer SpecialResourceDriverContainer `json:"driverContainer,omitempty"`
 	// +kubebuilder:validation:Optional
 	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
 	// +kubebuilder:validation:Optional

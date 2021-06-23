@@ -122,6 +122,7 @@ func SpecialResourcesReconcile(r *SpecialResourceReconciler, req ctrl.Request) (
 
 	}
 
+	log.Info("Reconciling Parent")
 	if err := ReconcileSpecialResourceChart(r, r.parent, pchart, r.parent.Spec.Set); err != nil {
 		// We do not want a stacktrace here, errors.Wrap already created
 		// breadcrumb of errors to follow. Just sprintf with %v rather than %+v
@@ -203,7 +204,7 @@ func createSpecialResourceFrom(r *SpecialResourceReconciler, ch *chart.Chart, dp
 		log.Info("Creating SpecialResource from template, cannot find it in charts directory")
 		res, err := controllerruntime.CreateOrUpdate(context.TODO(), clients.Interface, &sr, noop)
 		exit.OnError(errors.Wrap(err, string(res)))
-		return nil
+		return errors.New("Created new SpecialResource we need to Reconcile")
 	}
 
 	log.Info("Creating SpecialResource: " + ch.Files[idx].Name)
