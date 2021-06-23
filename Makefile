@@ -6,10 +6,6 @@ IMAGE            ?= quay.io/openshift-psap/special-resource-operator:$(TAG)
 CSPLIT           ?= csplit - --prefix="" --suppress-matched --suffix-format="%04d.yaml"  /---/ '{*}' --silent
 YAMLFILES        ?= $(shell  find manifests charts -name "*.yaml"  -not \( -path "charts/lustre/lustre-aws-fsx-0.0.1/csi-driver/*" -prune \)  -not \( -path "charts/*/shipwright-*/*" -prune \) -not \( -path "charts/experimental/*" -prune \) )
 
-# To disable the creation of the ServiceMonitor in the case that
-# the Prometheus operator is not installed, set PROMETHEUS to a non-zero value
-PROMETHEUS ?= 0
-
 export PATH := go/bin:$(PATH)
 include Makefile.specialresource.mk
 include Makefile.helm.mk
@@ -95,6 +91,13 @@ configure:
 	cd config/default && $(KUSTOMIZE) edit set namespace $(NAMESPACE)
 	cd config/manager && $(KUSTOMIZE) edit set image controller=$(IMAGE)
 
+configure-vanilla-k8s:
+	echo "Disabling Prometheus ServiceMonitor"; \
+	sed -i 's/^- ..\/prometheus/#- ..\/prometheus/g' config/default/kustomization.yaml; \
+	sed -i 's/^- ..\/clusteroperator/#- ..\/clusteroperator/g' config/default/kustomization.yaml; \
+	sed -i 's/^patchesStrategicMerge:/#patchesStrategicMerge:/' config/default/kustomization.yaml; \
+	sed -i 's/^- manager_auth_proxy_patch.yaml/#- manager_auth_proxy_patch.yaml/' config/default/kustomization.yaml; \
+	cd manifests; rm -f 00*
 
 # Deploy controller in the configured Kubernetes cluster in ~/.kube/config
 deploy: patch manifests
@@ -119,20 +122,7 @@ manifests-gen: controller-gen
 	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=manager-role webhook paths="./..." output:crd:artifacts:config=config/crd/bases
 
 manifests: manifests-gen kustomize configure
-	if [[ $(PROMETHEUS) == 0 ]]; then \
-		echo "Deployment expects Prometheus operator for ServiceMonitor"; \
-		sed -i 's/^#- ..\/clusteroperator/- ..\/clusteroperator/' config/default/kustomization.yaml; \
-		sed -i 's/^#- ..\/prometheus/- ..\/prometheus/' config/default/kustomization.yaml; \
-		sed -i 's/^#patchesStrategicMerge:/patchesStrategicMerge:/' config/default/kustomization.yaml; \
-		sed -i 's/^#- manager_auth_proxy_patch.yaml/- manager_auth_proxy_patch.yaml/' config/default/kustomization.yaml; \
-	else \
-		echo "Disabling Prometheus ServiceMonitor"; \
-		sed -i 's/^- ..\/prometheus/#- ..\/prometheus/g' config/default/kustomization.yaml; \
-		sed -i 's/^- ..\/clusteroperator/#- ..\/clusteroperator/g' config/default/kustomization.yaml; \
-		sed -i 's/^patchesStrategicMerge:/#patchesStrategicMerge:/' config/default/kustomization.yaml; \
-		sed -i 's/^- manager_auth_proxy_patch.yaml/#- manager_auth_proxy_patch.yaml/' config/default/kustomization.yaml; \
-	fi;
-	cd $@; rm -f 00*
+
 	cd $@; $(KUSTOMIZE) build ../config/namespace | $(CSPLIT)
 	cd $@; bash ../scripts/rename.sh
 	cd $@; $(KUSTOMIZE) build ../config/cr > 0016_specialresource_special-resource-preamble.yaml
