@@ -7,11 +7,77 @@ either via HTTP, OCI or file:///.
 Most of the time the charts are packaged with SRO. In this way we have tested SRO recipes
 for each K8S or OpenShift release.
 
+A SRO recipe consists of an CR and a packaged Helm chart.
 
+Here is a simple CR for an out-of-tree driver build
 
+```yaml
+apiVersion: sro.openshift.io/v1beta1
+kind: SpecialResource
+metadata:
+  name: simple-kmod
+spec:
+  namespace: simple-kmod
+  chart:
+    name: simple-kmod
+    version: 0.0.1
+    repository:
+      name: example
+      url: file:///charts/example
+  set:
+    kind: Values
+    apiVersion: sro.openshift.io/v1beta1
+    kmodNames: ["simple-kmod", "simple-procfs-kmod"]
+    buildArgs:
+    - name: "KMODVER"
+      value: "SRO"
+  driverContainer:
+    source:
+      git:
+        ref: "master"
+        uri: "https://github.com/openshift-psap/kvc-simple-kmod.git"
+```
 
+SRO keeps an internal Helm repository of all packaged helm charts and they are
+organized in repositories, the same structure that helm uses for storing charts
+online.
 
+The `chart:` section tells SRO in which repository to find  the simple-kmod chart
+alongside with an version. This is the same version you would specify in the
+Chart.yaml in your helm chart.
 
+SRO charts usually do not have a values.yaml because most of the information that
+is needed to build an out-of-tree driver is gathered during runtime. See the next
+section for "all" runtime variables.
+
+The `set:` sections can be used to set values in the chart templates, think of it
+as an programmatic approach to provide values. Those values will be coalesced with
+the values.yaml if it exists.
+
+The simple-kmod BuildConfig uses e.g. the buildArgs supplied in the `set:` section
+in the BuildConfig template to populate arguments:
+
+```yaml
+        {{- range $arg := .Values.buildArgs }}
+        - name: {{ $arg.name }}
+          value: {{ $arg.value }}
+        {{- end }}
+```
+
+The `driverContainer:` section describes how to build the driver-container an
+extensive list of options is listed here: <https://github.com/openshift/enhancements/pull/357>
+
+An SpecialResource can also have an dependency, a dependency is expressed again
+with a `chart:` and `set:` section. The ping-pong special resource illustrates
+this: charts/example/ping-pong-0.0.1/ping-pong.yaml.
+
+We can use externally hosted charts, like the cert-manager helm chart and deploy
+it via SRO. As stated above the SRO helm support also supports the file:///
+transport, meaning we can of course also refer to charts in the internal
+registry.
+
+One can also attach metadata to SRO resources to be created, see: <https://www.openshift.com/blog/part-2-how-to-enable-hardware-accelerators-on-openshift-sro-building-blocks> for
+further information.
 
 ## Runtime Variables
 

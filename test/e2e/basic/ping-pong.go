@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"os"
 	"strings"
 	"time"
 
@@ -19,10 +20,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var RestConfig *rest.Config
 var clientSet kubernetes.Clientset
 
 var _ = ginkgo.Describe("[basic][ping-pong] create and deploy ping-poing", func() {
@@ -38,11 +39,11 @@ var _ = ginkgo.Describe("[basic][ping-pong] create and deploy ping-poing", func(
 })
 
 func GetPodLogs(namespace string, podName string, containerName string, follow bool) (string, error) {
-	//count := int64(100)
+	count := int64(100)
 	podLogOptions := v1.PodLogOptions{
 		//		Container: containerName,
-		//		Follow:    follow,
-		//		TailLines: &count,
+		Follow:    follow,
+		TailLines: &count,
 	}
 
 	podLogRequest := clientSet.CoreV1().
@@ -55,21 +56,21 @@ func GetPodLogs(namespace string, podName string, containerName string, follow b
 	defer stream.Close()
 
 	var message string
-	for {
-		buf := make([]byte, 2000)
-		numBytes, err := stream.Read(buf)
-		if numBytes == 0 {
-			continue
-		}
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return "", err
-		}
-		message = string(buf[:numBytes])
-		fmt.Print(message)
+
+	buf := make([]byte, 2000)
+	numBytes, err := stream.Read(buf)
+	if numBytes == 0 {
+		return "", errors.New("Nothing read, returngin")
 	}
+	if err == io.EOF {
+		return "", errors.New("EOF")
+	}
+	if err != nil {
+		return "", err
+	}
+	message = string(buf[:numBytes])
+	fmt.Print(message)
+
 	return message, nil
 }
 
@@ -128,7 +129,11 @@ func specialResourceCreate(cs *framework.ClientSet, cl client.Client, path strin
 // GetKubeClientSetOrDie Add a native non-caching client for advanced CRUD operations
 func GetKubeClientSetOrDie() kubernetes.Clientset {
 
-	clientSet, err := kubernetes.NewForConfig(RestConfig)
+	kubeconfig := os.Getenv("KUBERNETES_CONFIG")
+	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
+
+	clientSet, err := kubernetes.NewForConfig(config)
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	return *clientSet
 }

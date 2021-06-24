@@ -429,6 +429,13 @@ func CRUD(obj *unstructured.Unstructured, r *SpecialResourceReconciler) error {
 		logger = log.WithValues("Kind", obj.GetKind()+": "+obj.GetName())
 	}
 
+	// SpecialResource is the parent, all other objects are childs and need a reference
+	// but only set the ownerreference if created by SRO do not set ownerreference per default
+	if obj.GetKind() != "SpecialResource" && obj.GetKind() != "Namespace" {
+		err := controllerutil.SetControllerReference(&r.specialresource, obj, r.Scheme)
+		exit.OnError(err)
+	}
+
 	found := obj.DeepCopy()
 
 	err := clients.Interface.Get(context.TODO(), types.NamespacedName{Namespace: obj.GetNamespace(), Name: obj.GetName()}, found)
