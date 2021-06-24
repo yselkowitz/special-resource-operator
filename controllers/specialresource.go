@@ -191,6 +191,10 @@ func noop() error {
 
 func createSpecialResourceFrom(r *SpecialResourceReconciler, ch *chart.Chart, dp helmer.HelmChart) error {
 
+	vals := unstructured.Unstructured{}
+	vals.SetKind("Values")
+	vals.SetAPIVersion("sro.openshift.io/v1beta1")
+
 	sr := srov1beta1.SpecialResource{}
 	sr.Name = ch.Metadata.Name
 	sr.Spec.Namespace = sr.Name
@@ -198,6 +202,9 @@ func createSpecialResourceFrom(r *SpecialResourceReconciler, ch *chart.Chart, dp
 	sr.Spec.Chart.Version = ch.Metadata.Version
 	sr.Spec.Chart.Repository.Name = dp.Repository.Name
 	sr.Spec.Chart.Repository.URL = dp.Repository.URL
+	sr.Spec.Chart.Tags = make([]string, 0)
+	sr.Spec.Set = vals
+	sr.Spec.Dependencies = make([]srov1beta1.SpecialResourceDependency, 0)
 
 	var idx int
 	if idx = slice.FindCRFile(ch.Files, r.dependency.Name); idx == -1 {
