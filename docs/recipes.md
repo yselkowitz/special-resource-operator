@@ -79,6 +79,26 @@ registry.
 One can also attach metadata to SRO resources to be created, see: <https://www.openshift.com/blog/part-2-how-to-enable-hardware-accelerators-on-openshift-sro-building-blocks> for
 further information.
 
+## Ordering of Resource Creation
+
+Helm per default has a specific ordering in which order resources should be created
+when a chart is templated. SRO goes one step further and is using a specific naming
+scheme of templates to force ordering between them.
+
+A single file (template) in the templates direcotry represents a state if the file
+starts with a four digit number. Each of these files are treated as states that
+are executed in ascending numbering order. The ping-pong chat illustrates this.
+
+It is alos possible to mix states and non states in a chart. The states are executed
+first and then the non-state templates.
+
+SRO has also some advanced waiting callbacks for resources, e.g. we can wait for
+a specific log in a Pod or wait for any other resource to be in a specific state.
+
+Sometimes we don't want to start another DaemonSet before the DaemonSet in a
+previous state is fully rolled out not only created by the services or daemons
+inside of the Pod/Container fully started.
+
 ## Runtime Variables
 
 ```yaml
