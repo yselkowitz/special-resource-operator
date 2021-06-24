@@ -3,6 +3,7 @@ package e2e
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"strings"
@@ -46,6 +47,9 @@ func checkPingPong(cs *framework.ClientSet, cl client.Client) {
 			//run command in pod
 			ginkgo.By("Ensuring that ping-pong is working")
 			log := getPodLogs(pod)
+
+			fmt.Printf("PODLOG: %s %s\n", pod.Name, log)
+
 			if !strings.Contains(log, "Ping") || !strings.Contains(log, "Pong") {
 				warn.OnError(errors.New("Did not see Ping or either Pong, waiting"))
 			}
@@ -91,6 +95,7 @@ func getPodLogs(pod corev1.Pod) string {
 	if err != nil {
 		return "error in getting access to K8S"
 	}
+
 	req := clientset.CoreV1().Pods(pod.Namespace).GetLogs(pod.Name, &podLogOpts)
 	podLogs, err := req.Stream(context.TODO())
 	if err != nil {
