@@ -78,7 +78,7 @@ jobs:
                 break
             fi
             echo "waiting for lock"
-            sleep
+            sleep $SECS
         done
 #    - run: make undeploy
 #    - run: TAG=pr-${{ steps.short-sha.outputs.sha }} make go-deploy-manifests
