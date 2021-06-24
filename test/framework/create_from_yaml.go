@@ -54,6 +54,9 @@ func CreateFromYAML(yamlFile []byte, cl client.Client) {
 		obj := getObjFromYAMLSpec(yamlSpec)
 
 		err := cl.Create(context.TODO(), obj)
+		if apierrors.IsAlreadyExists(err) {
+			warn.OnError(err)
+		}
 		exit.OnError(err)
 
 		log.Info("Created", "Kind", obj.GetKind(), "Name", obj.GetName())
