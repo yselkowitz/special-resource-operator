@@ -1,7 +1,6 @@
 package e2e
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -15,11 +14,9 @@ import (
 	"github.com/openshift-psap/special-resource-operator/pkg/warn"
 	"github.com/openshift-psap/special-resource-operator/test/framework"
 	"github.com/pkg/errors"
-	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -136,33 +133,4 @@ func GetKubeClientSetOrDie() kubernetes.Clientset {
 	clientSet, err := kubernetes.NewForConfig(config)
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	return *clientSet
-}
-
-func getPodLogs(pod corev1.Pod) string {
-	podLogOpts := corev1.PodLogOptions{}
-	config, err := rest.InClusterConfig()
-	if err != nil {
-		return "error in getting config"
-	}
-	// creates the clientset
-	clientset, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		return "error in getting access to K8S"
-	}
-
-	req := clientset.CoreV1().Pods(pod.Namespace).GetLogs(pod.Name, &podLogOpts)
-	podLogs, err := req.Stream(context.TODO())
-	if err != nil {
-		return "error in opening stream"
-	}
-	defer podLogs.Close()
-
-	buf := new(bytes.Buffer)
-	_, err = io.Copy(buf, podLogs)
-	if err != nil {
-		return "error in copy information from podLogs to buf"
-	}
-	str := buf.String()
-
-	return str
 }
