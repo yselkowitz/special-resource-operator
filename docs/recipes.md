@@ -83,11 +83,11 @@ further information.
 
 Helm per default has a specific ordering in which order resources should be created
 when a chart is templated. SRO goes one step further and is using a specific naming
-scheme of templates to force ordering between them.
+scheme of templates to force ordering between any resource.
 
 A single file (template) in the templates direcotry represents a state if the file
 starts with a four digit number. Each of these files are treated as states that
-are executed in ascending numbering order. The ping-pong chat illustrates this.
+are executed in ascending numbering order. The ping-pong chart illustrates this.
 
 It is alos possible to mix states and non states in a chart. The states are executed
 first and then the non-state templates.
