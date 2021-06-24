@@ -10,7 +10,7 @@ import (
 
 	"github.com/onsi/ginkgo"
 	"github.com/onsi/gomega"
-	"github.com/openshift-psap/special-resource-operator/pkg/exit"
+	"github.com/openshift-psap/special-resource-operator/pkg/warn"
 	"github.com/openshift-psap/special-resource-operator/test/framework"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
@@ -47,7 +47,7 @@ func checkPingPong(cs *framework.ClientSet, cl client.Client) {
 			ginkgo.By("Ensuring that ping-pong is working")
 			log := getPodLogs(pod)
 			if !strings.Contains(log, "Ping") || !strings.Contains(log, "Pong") {
-				exit.OnError(errors.New("Did not see Ping or either Pong"))
+				warn.OnError(errors.New("Did not see Ping or either Pong, waiting"))
 			}
 
 			if strings.Contains(log, "Ping") && strings.Contains(log, "Pong") {
