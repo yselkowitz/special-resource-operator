@@ -56,6 +56,7 @@ var RunInfo = RuntimeInformation{
 	OperatingSystemDecimal:    "",
 	KernelFullVersion:         "",
 	KernelPatchVersion:        "",
+	DriverToolkitImage:        "",
 	ClusterVersion:            "",
 	ClusterVersionMajorMinor:  "",
 	ClusterUpgradeInfo:        make(map[string]upgrade.NodeVersion),
@@ -63,16 +64,8 @@ var RunInfo = RuntimeInformation{
 	PushSecretName:            "",
 	OSImageURL:                "",
 	Proxy:                     proxy.Configuration{},
-	GroupName: ResourceGroupName{
-		DriverBuild:            "driver-build",
-		DriverContainer:        "driver-container",
-		RuntimeEnablement:      "runtime-enablement",
-		DevicePlugin:           "device-plugin",
-		DeviceMonitoring:       "device-monitoring",
-		DeviceDashboard:        "device-dashboard",
-		DeviceFeatureDiscovery: "device-feature-discovery",
-		CSIDriver:              "csi-driver"},
-	SpecialResource: srov1beta1.SpecialResource{},
+	GroupName:                 ResourceGroupName{DriverBuild: "driver-build", DriverContainer: "driver-container", RuntimeEnablement: "runtime-enablement", DevicePlugin: "device-plugin", DeviceMonitoring: "device-monitoring", DeviceDashboard: "device-dashboard", DeviceFeatureDiscovery: "device-feature-discovery", CSIDriver: "csi-driver"},
+	SpecialResource:           srov1beta1.SpecialResource{},
 }
 
 func logRuntimeInformation() {

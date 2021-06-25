@@ -100,3 +100,15 @@ package rbac
 // +kubebuilder:rbac:groups=coordination.k8s.io,resources=leases,resourceNames=cert-manager-controller,verbs=patch
 // +kubebuilder:rbac:groups=admissionregistration.k8s.io,resources=mutatingwebhookconfigurations,verbs=create;get;list;watch;update;delete
 // +kubebuilder:rbac:groups=admissionregistration.k8s.io,resources=validatingwebhookconfigurations,verbs=create;get;list;watch;update;delete
+// +kubebuilder:rbac:groups=*,resources=cronjobs,verbs=get
+// +kubebuilder:rbac:groups=*,resources=daemonsets,verbs=get
+// +kubebuilder:rbac:groups=*,resources=deployments,verbs=get
+// +kubebuilder:rbac:groups=*,resources=imagepolicies,verbs=get
+// +kubebuilder:rbac:groups=*,resources=jobs,verbs=get;create
+// +kubebuilder:rbac:groups=*,resources=mutatingwebhookconfigurations,verbs=get
+// +kubebuilder:rbac:groups=*,resources=pods,verbs=get
+// +kubebuilder:rbac:groups=*,resources=replicacontrollers,verbs=get
+// +kubebuilder:rbac:groups=*,resources=replicasets,verbs=get
+// +kubebuilder:rbac:groups=*,resources=statefulsets,verbs=get
+// +kubebuilder:rbac:groups=connaisseur.policy,resources=imagepolicies,verbs=create
+// +kubebuilder:rbac:groups=admissionregistration.k8s.io/v1beta1,resources=mutatingwebhookconfigurations,verbs=create;delete;update;list

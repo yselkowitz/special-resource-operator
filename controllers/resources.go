@@ -404,6 +404,11 @@ func createFromYAML(yamlFile []byte, r *SpecialResourceReconciler,
 		}
 		// Create Update Delete Patch resources
 		err = CRUD(obj, r)
+		// The mutating webhook needs a couple of secs to be ready
+		// sleep for 5 secs and requeue
+		if strings.Contains(err.Error(), "failed calling webhook") {
+			return errors.Wrap(err, "Webhook not ready, requeue")
+		}
 		exit.OnError(errors.Wrapf(err, "CRUD exited non-zero on Object: %+v", obj))
 
 		// Callbacks after CRUD will wait for ressource and check status
