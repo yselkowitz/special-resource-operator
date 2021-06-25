@@ -3,9 +3,9 @@ entries:
   connaisseur:
   - apiVersion: v2
     appVersion: 1.16.0
-    created: "2021-06-24T16:39:43.017256212Z"
+    created: "2021-06-25T08:29:01.44290715Z"
     description: A Helm chart for the Connaisseur Admission Controller
-    digest: 3a1f8ca2e40b70644ff3b75072aefb94782feb5f3b62da4b4ff3d9534929d5c2
+    digest: a4d680b68825416c97ecdc512d1d939ff47c33a7318a062c7f5961ed31f1dc92
     name: connaisseur
     type: application
     urls:
@@ -14,9 +14,9 @@ entries:
   ping-pong:
   - apiVersion: v2
     appVersion: 1.0.0
-    created: "2021-06-24T16:39:43.017536269Z"
+    created: "2021-06-25T08:29:01.443198306Z"
     description: Simple go app to showcase cert-manager intergration
-    digest: e7c9f63ec1073cb6956d12012c5c05a5680804e707469257e3aac24acb875659
+    digest: ca33b7cc6ed40eca2ac3868fb758b974a59d86b4a191de59886a066c637b90ea
     icon: https://avatars.githubusercontent.com/u/55542927
     name: ping-pong
     type: application
@@ -26,13 +26,13 @@ entries:
   simple-kmod:
   - apiVersion: v2
     appVersion: 1.0.0
-    created: "2021-06-24T16:39:43.017728763Z"
+    created: "2021-06-25T08:29:01.443350319Z"
     description: Simple kmod will deploy a simple kmod driver-container
-    digest: beb58617b43d04172c512f535183e3b80aaaada1a7e1a7c147333b7b6bd4b200
+    digest: 04b0b29969dd70bf4162002bf4a285154b1dd25bc526708c898e5343f6a13a6a
     icon: https://avatars.githubusercontent.com/u/55542927
     name: simple-kmod
     type: application
     urls:
     - file:///charts/example/simple-kmod-0.0.1.tgz
     version: 0.0.1
-generated: "2021-06-24T16:39:43.016306952Z"
+generated: "2021-06-25T08:29:01.441938028Z"
