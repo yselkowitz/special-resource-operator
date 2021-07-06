@@ -3,12 +3,12 @@ entries:
   fpga-xrt-driver:
   - apiVersion: v2
     appVersion: 1.16.0
-    created: "2021-06-28T13:05:13.744858185-04:00"
+    created: "2021-07-06T15:49:31.024681494-04:00"
     description: A Helm chart for Kubernetes
-    digest: 7b54a601b9d2c003fe88fbe20331972c78180abecae46776facedc6fff613e90
+    digest: 0b268c060eb528dc57d17db661ba0ecc3015717d9f3442102173ef92854dd6db
     name: fpga-xrt-driver
     type: application
     urls:
     - file:///charts/xilinx/fpga-xrt-driver-4.7.11.tgz
     version: 4.7.11
-generated: "2021-06-28T13:05:13.744599489-04:00"
+generated: "2021-07-06T15:49:31.024415811-04:00"

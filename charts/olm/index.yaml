@@ -3,13 +3,13 @@ entries:
   cert-manager:
   - apiVersion: v2
     appVersion: 1.0.0
-    created: "2021-06-28T13:05:13.631472453-04:00"
+    created: "2021-07-06T15:49:30.909623641-04:00"
     description: A recipe to install cert-manager via OLM
-    digest: d7991bca673c195fb4e529395d4eee1b67e15a4077b1cc52f7f8b0ecefe82a1e
+    digest: 3b7953de07c9ef5ca8410d499c69d6e146d42d39de7c8b1807972ddb9bb8d1e9
     icon: https://avatars.githubusercontent.com/u/55542927
     name: cert-manager
     type: application
     urls:
     - file:///charts/olm/cert-manager-0.0.1.tgz
     version: 0.0.1
-generated: "2021-06-28T13:05:13.631039868-04:00"
+generated: "2021-07-06T15:49:30.90929681-04:00"
