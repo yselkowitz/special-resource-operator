@@ -93,6 +93,8 @@ type SpecialResourceSpec struct {
 	// +kubebuilder:validation:Optional
 	ForceUpgrade bool `json:"forceUpgrade"`
 	// +kubebuilder:validation:Optional
+	Debug bool `json:"debug"`
+	// +kubebuilder:validation:Optional
 	// +kubebuilder:pruning:PreserveUnknownFields
 	// +kubebuilder:validation:EmbeddedResource
 	Set unstructured.Unstructured `json:"set,omitempty"`
@@ -101,7 +103,7 @@ type SpecialResourceSpec struct {
 	// +kubebuilder:validation:Optional
 	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
 	// +kubebuilder:validation:Optional
-	Dependencies []SpecialResourceDependency `json:"dependencies"`
+	Dependencies []SpecialResourceDependency `json:"dependencies,omitempty"`
 }
 
 // SpecialResourceDependency a dependent helm chart

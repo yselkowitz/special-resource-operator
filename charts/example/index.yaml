@@ -3,20 +3,32 @@ entries:
   connaisseur:
   - apiVersion: v2
     appVersion: 1.16.0
-    created: "2021-06-25T08:29:01.44290715Z"
+    created: "2021-07-08T11:40:39.989008689Z"
     description: A Helm chart for the Connaisseur Admission Controller
-    digest: a4d680b68825416c97ecdc512d1d939ff47c33a7318a062c7f5961ed31f1dc92
+    digest: 154e6bef6406de13ead6e717a95919c07b7d025ed8a304b8772d2475242a2301
     name: connaisseur
     type: application
     urls:
     - file:///charts/example/connaisseur-0.2.0.tgz
     version: 0.2.0
+  multi-build:
+  - apiVersion: v2
+    appVersion: 1.0.0
+    created: "2021-07-08T11:40:39.989166103Z"
+    description: Showcase how to use multiple Builds with different DTKs
+    digest: 31e1b0c59bffdd1ba7a60dc6c6b61b9ffe783f3a1fea1cff8ac3c8b7dfb48862
+    icon: https://avatars.githubusercontent.com/u/55542927
+    name: multi-build
+    type: application
+    urls:
+    - file:///charts/example/multi-build-0.0.1.tgz
+    version: 0.0.1
   ping-pong:
   - apiVersion: v2
     appVersion: 1.0.0
-    created: "2021-06-25T08:29:01.443198306Z"
+    created: "2021-07-08T11:40:39.9894721Z"
     description: Simple go app to showcase cert-manager intergration
-    digest: ca33b7cc6ed40eca2ac3868fb758b974a59d86b4a191de59886a066c637b90ea
+    digest: f0ec8ccbc2e033e1fe86624a04f943b36fc3a36cbac2a28b7e6445748ee0c2d7
     icon: https://avatars.githubusercontent.com/u/55542927
     name: ping-pong
     type: application
@@ -26,13 +38,13 @@ entries:
   simple-kmod:
   - apiVersion: v2
     appVersion: 1.0.0
-    created: "2021-06-25T08:29:01.443350319Z"
+    created: "2021-07-08T11:40:39.989637533Z"
     description: Simple kmod will deploy a simple kmod driver-container
-    digest: 04b0b29969dd70bf4162002bf4a285154b1dd25bc526708c898e5343f6a13a6a
+    digest: 8acaed2b85cdd64aa8ac28ac5f949adb3fd38ad0d1d37e8554ebbd074c4388f1
     icon: https://avatars.githubusercontent.com/u/55542927
     name: simple-kmod
     type: application
     urls:
     - file:///charts/example/simple-kmod-0.0.1.tgz
     version: 0.0.1
-generated: "2021-06-25T08:29:01.441938028Z"
+generated: "2021-07-08T11:40:39.988060028Z"

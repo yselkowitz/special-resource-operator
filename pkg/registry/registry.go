@@ -41,10 +41,10 @@ func init() {
 }
 
 type DriverToolkitEntry struct {
-	ImageURL            string
-	KernelFullVersion   string
-	RTKernelFullVersion string
-	OSVersion           string
+	ImageURL            string `json:"imageURL"`
+	KernelFullVersion   string `json:"kernelFullVersion"`
+	RTKernelFullVersion string `json:"RTKernelFullVersion"`
+	OSVersion           string `json:"OSVersion"`
 }
 
 func LastLayer(entry string) v1.Layer {
@@ -131,7 +131,7 @@ func ExtractToolkitRelease(layer v1.Layer) (DriverToolkitEntry, error) {
 
 	}
 
-	return dtk, errors.New("Missing driver toolkit entry: /etc/river-toolkit-release.json")
+	return dtk, errors.New("Missing driver toolkit entry: /etc/driver-toolkit-release.json")
 }
 
 func ReleaseManifests(layer v1.Layer) (key string, value string) {

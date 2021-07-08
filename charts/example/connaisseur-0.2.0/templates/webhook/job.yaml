@@ -2,7 +2,7 @@ apiVersion: batch/v1
 kind: Job
 metadata:
   name: {{ .Chart.Name }}-install-webhook-job
-  namespace: {{ .Release.namespace }}
+  namespace: {{ .Release.Namespace }}
   annotations:
     helm.sh/hook: post-install
     helm.sh/hook-weight: "5"
@@ -48,7 +48,7 @@ apiVersion: batch/v1
 kind: Job
 metadata:
   name: {{ .Chart.Name }}-delete-webhook-job
-  namespace: {{ .Release.namespace }}
+  namespace: {{ .Release.Namespace }}
   annotations:
     helm.sh/hook: pre-delete, pre-upgrade
     helm.sh/hook-weight: "5"
@@ -87,7 +87,7 @@ apiVersion: batch/v1
 kind: Job
 metadata:
   name: {{ .Chart.Name }}-upgrade-webhook-job
-  namespace: {{ .Release.namespace }}
+  namespace: {{ .Release.Namespace }}
   annotations:
     helm.sh/hook: post-upgrade
     helm.sh/hook-weight: "5"

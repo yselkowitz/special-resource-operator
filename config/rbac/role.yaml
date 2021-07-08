@@ -11,7 +11,12 @@ rules:
   resources:
   - cronjobs
   verbs:
+  - delete
   - get
+  - list
+  - patch
+  - update
+  - watch
 - apiGroups:
   - '*'
   resources:
@@ -29,14 +34,21 @@ rules:
   resources:
   - imagepolicies
   verbs:
+  - delete
   - get
+  - update
 - apiGroups:
   - '*'
   resources:
   - jobs
   verbs:
   - create
+  - delete
   - get
+  - list
+  - patch
+  - update
+  - watch
 - apiGroups:
   - '*'
   resources:
@@ -126,6 +138,7 @@ rules:
   - delete
   - get
   - list
+  - patch
   - update
   - watch
 - apiGroups:
@@ -137,6 +150,7 @@ rules:
   - delete
   - get
   - list
+  - patch
   - update
   - watch
 - apiGroups:
@@ -233,6 +247,13 @@ rules:
   - get
   - list
   - update
+  - watch
+- apiGroups:
+  - batch
+  resources:
+  - jobs
+  verbs:
+  - list
   - watch
 - apiGroups:
   - build.openshift.io
