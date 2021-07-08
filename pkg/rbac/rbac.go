@@ -26,7 +26,7 @@ package rbac
 // +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterrolebindings,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=core,resources=events,verbs=list;watch;create;update;patch;delete;get
 // +kubebuilder:rbac:groups=core,resources=persistentvolumeclaims,verbs=get;list;watch;update;
-// +kubebuilder:rbac:groups=core,resources=persistentvolumes,verbs=get;list;watch;create;delete
+// +kubebuilder:rbac:groups=core,resources=persistentvolumes,verbs=get;list;watch;create;delete;update;patch
 // +kubebuilder:rbac:groups=coordination.k8s.io,resources=leases,verbs=get;list;watch;create;update;delete
 // +kubebuilder:rbac:groups=storage.k8s.io,resources=csinodes,verbs=get;list;watch
 // +kubebuilder:rbac:groups=storage.k8s.io,resources=storageclasses,verbs=watch
