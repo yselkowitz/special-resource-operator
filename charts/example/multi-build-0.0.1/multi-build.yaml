@@ -1,0 +1,24 @@
+apiVersion: sro.openshift.io/v1beta1
+kind: SpecialResource
+metadata:
+  name: multi-build
+spec:
+  debug: true
+  namespace: multi-build
+  chart:
+    name: multi-build
+    version: 0.0.1
+    repository:
+      name: example
+      url: file:///charts/example
+  set:
+    kind: Values
+    apiVersion: sro.openshift.io/v1beta1
+    buildArgs:
+    - name: "KMODVER"
+      value: "{{ .Values.kernelFullVersion }}"
+  driverContainer:
+    source:
+      git:
+        ref: "master"
+        uri: "https://github.com/openshift-psap/kvc-simple-kmod.git"
