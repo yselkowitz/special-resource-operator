@@ -7,7 +7,7 @@ To create the states in the template directory as a CM we can run the
 following:
 
 ```bash
-VERSION=0.0.1 REPO=exammple SPECIALRESOURCE=multi-build make assets
+VERSION=0.0.1 REPO=example SPECIALRESOURCE=multi-build make assets
 ```
 
 This command will create a CM with all the states and SRO will use them in the
