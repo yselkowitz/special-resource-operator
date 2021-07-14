@@ -39,6 +39,7 @@ type RuntimeInformation struct {
 	KernelFullVersion         string                         `json:"kernelFullVersion"`
 	KernelPatchVersion        string                         `json:"kernelPatchVersion"`
 	DriverToolkitImage        string                         `json:"driverToolkitImage"`
+	Platform                  string                         `json:"platform"`
 	ClusterVersion            string                         `json:"clusterVersion"`
 	ClusterVersionMajorMinor  string                         `json:"clusterVersionMajorMinor"`
 	ClusterUpgradeInfo        map[string]upgrade.NodeVersion `json:"clusterUpgradeInfo"`
@@ -57,6 +58,7 @@ var RunInfo = RuntimeInformation{
 	KernelFullVersion:         "",
 	KernelPatchVersion:        "",
 	DriverToolkitImage:        "",
+	Platform:                  "",
 	ClusterVersion:            "",
 	ClusterVersionMajorMinor:  "",
 	ClusterUpgradeInfo:        make(map[string]upgrade.NodeVersion),
@@ -82,6 +84,7 @@ func logRuntimeInformation() {
 	log.Info("Runtime Information", "OperatingSystemDecimal", RunInfo.OperatingSystemDecimal)
 	log.Info("Runtime Information", "KernelFullVersion", RunInfo.KernelFullVersion)
 	log.Info("Runtime Information", "KernelPatchVersion", RunInfo.KernelPatchVersion)
+	log.Info("Runtime Information", "Platform", RunInfo.Platform)
 	log.Info("Runtime Information", "ClusterVersion", RunInfo.ClusterVersion)
 	log.Info("Runtime Information", "ClusterVersionMajorMinor", RunInfo.ClusterVersionMajorMinor)
 	log.Info("Runtime Information", "ClusterUpgradeInfo", RunInfo.ClusterUpgradeInfo)
@@ -107,6 +110,11 @@ func getRuntimeInformation(r *SpecialResourceReconciler) {
 
 	RunInfo.KernelPatchVersion, err = kernel.PatchVersion(RunInfo.KernelFullVersion)
 	exit.OnError(errors.Wrap(err, "Failed to get kernel patch version"))
+
+	// Only want to initialize the platform once.
+	if RunInfo.Platform == "" {
+		RunInfo.Platform = clients.GetPlatform()
+	}
 
 	RunInfo.ClusterVersion, RunInfo.ClusterVersionMajorMinor, err = cluster.Version()
 	exit.OnError(errors.Wrap(err, "Failed to get cluster version"))
@@ -144,12 +152,8 @@ func retryGetPushSecretName(r *SpecialResourceReconciler) (string, error) {
 
 func getPushSecretName(r *SpecialResourceReconciler) (string, error) {
 
-	onOCP, err := clients.BuildConfigsAvailable()
-	if err != nil {
-		return "", errors.Wrap(err, "Error checking for BuildConfig API resource")
-	}
-	if !onOCP {
-		log.Info("BuildConfigs not found, assuming vanilla k8s.")
+	if RunInfo.Platform == "K8S" {
+		log.Info("Warning: On vanilla K8s. Skipping search for push-secret")
 		return "", nil
 	}
 
@@ -162,7 +166,7 @@ func getPushSecretName(r *SpecialResourceReconciler) (string, error) {
 	opts := []client.ListOption{
 		client.InNamespace(r.specialresource.Spec.Namespace),
 	}
-	err = clients.Interface.List(context.TODO(), secrets, opts...)
+	err := clients.Interface.List(context.TODO(), secrets, opts...)
 	if err != nil {
 		return "", errors.Wrap(err, "Client cannot get SecretList")
 	}

@@ -107,13 +107,8 @@ func (r *SpecialResourceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 // SetupWithManager main initalization for manager
 func (r *SpecialResourceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	log = r.Log.WithName(color.Print("setup", color.Brown))
-	buildConfigsAvailable, err := clients.BuildConfigsAvailable()
 
-	if err != nil {
-		return errors.Wrap(err, "Unexpected error checking if BuildConfig API resource is available.")
-	}
-
-	if buildConfigsAvailable {
+	if clients.GetPlatform() == "OCP" {
 		return ctrl.NewControllerManagedBy(mgr).
 			For(&srov1beta1.SpecialResource{}).
 			Owns(&v1.Pod{}).
@@ -136,7 +131,7 @@ func (r *SpecialResourceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			WithEventFilter(filter.Predicate()).
 			Complete(r)
 	} else {
-		log.Info("Warning: could not find buildConfigs resource assuming vanilla k8s. Manager will own a limited set of resourcs. ")
+		log.Info("Warning: assuming vanilla K8s. Manager will own a limited set of resources.")
 		return ctrl.NewControllerManagedBy(mgr).
 			For(&srov1beta1.SpecialResource{}).
 			Owns(&v1.Pod{}).

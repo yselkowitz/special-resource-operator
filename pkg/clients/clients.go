@@ -6,6 +6,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/openshift-psap/special-resource-operator/pkg/color"
+	"github.com/openshift-psap/special-resource-operator/pkg/exit"
 	buildv1 "github.com/openshift/api/build/v1"
 	clientconfigv1 "github.com/openshift/client-go/config/clientset/versioned/typed/config/v1"
 
@@ -95,7 +96,17 @@ func HasResource(resource schema.GroupVersionResource) (bool, error) {
 }
 
 func BuildConfigsAvailable() (bool, error) {
-
 	return HasResource(buildv1.SchemeGroupVersion.WithResource("buildconfigs"))
+}
 
+func GetPlatform() string {
+	clusterIsOCP, err := BuildConfigsAvailable()
+	if err != nil {
+		exit.OnError(err)
+	}
+	if clusterIsOCP {
+		return "OCP"
+	} else {
+		return "K8S"
+	}
 }
