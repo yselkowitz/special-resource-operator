@@ -21,8 +21,8 @@ VERSION=0.0.1 REPO=exammple SPECIALRESOURCE=multi-build make
 ```
 
 For this to work one has to create a `kustomization.yaml` that will be processed
-during a make run. One cannot just override one state all states are either
-read from one resource. Here is an `kustomization.yaml` as an example from the
+during a make run. One cannot just override one state, all states are
+read from one source (http, local, or ConfigMap). Here is an `kustomization.yaml` as an example from the
 `multi-build` recipe.
 
 ```yaml
