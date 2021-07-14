@@ -17,7 +17,7 @@ development without rebuilding SRO.
 To update the CR one can run:
 
 ```bash
-VERSION=0.0.1 REPO=exammple SPECIALRESOURCE=multi-build make
+VERSION=0.0.1 REPO=example SPECIALRESOURCE=multi-build make
 ```
 
 For this to work one has to create a `kustomization.yaml` that will be processed
