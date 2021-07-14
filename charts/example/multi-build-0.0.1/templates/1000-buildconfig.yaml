@@ -35,8 +35,8 @@ spec:
   output:
     to:
       kind: "DockerImage"
-      name: quay.io/openshift-psap/{{.Values.specialresource.metadata.name}}-{{.Values.groupName.driverContainer}}:v{{.Values.kernelFullVersion}}
+      name: {{ .Values.imageToSign }}
     pushSecret:
-      name: openshift-psap-multibuild-pull-secret
+      name: {{ .Values.pushSecret }}
 
 

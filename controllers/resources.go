@@ -133,29 +133,6 @@ func createImagePullerRoleBinding(r *SpecialResourceReconciler) error {
 // ReconcileChartStates Reconcile Hardware States
 func ReconcileChartStates(r *SpecialResourceReconciler, templates *unstructured.Unstructured) error {
 
-	/* // DEBUG START -------------------------------------------
-	{
-		var err error
-		debug := r.chart
-
-		debug.Values, err = chartutil.CoalesceValues(&debug, r.values.Object)
-		exit.OnError(err)
-
-		rinfo, err := runtime.DefaultUnstructuredConverter.ToUnstructured(&RunInfo)
-		exit.OnError(err)
-
-		debug.Values, err = chartutil.CoalesceValues(&debug, rinfo)
-		exit.OnError(err)
-
-		yaml, err := helmer.TemplateChart(debug, debug.Values, r.specialresource.Spec.Namespace)
-		exit.OnError(err)
-
-		fmt.Printf("--------------------------------------------------\n\n%s\n\n", yaml)
-
-	}
-
-	// DEBUG STOP ------------------------------------------- */
-
 	nostate := r.chart
 	nostate.Templates = []*chart.File{}
 
@@ -186,7 +163,9 @@ func ReconcileChartStates(r *SpecialResourceReconciler, templates *unstructured.
 
 		log.Info("Executing", "State", stateYAML.Name)
 
-		fmt.Printf("STATE YAML %s\n\n", stateYAML.Data)
+		if r.specialresource.Spec.Debug {
+			fmt.Printf("STATE YAML --------------------------------------------------\n%s\n\n", stateYAML.Data)
+		}
 
 		// Every YAML is one state, we generate the name of the
 		// state special-resource + first 4 digits of the state
@@ -237,8 +216,10 @@ func ReconcileChartStates(r *SpecialResourceReconciler, templates *unstructured.
 			step.Values, err = chartutil.CoalesceValues(&step, rinfo)
 			exit.OnError(err)
 
-			d, _ := yaml.Marshal(step.Values)
-			fmt.Printf("STEP VALUES %s\n\n", d)
+			if r.specialresource.Spec.Debug {
+				d, _ := yaml.Marshal(step.Values)
+				fmt.Printf("STEP VALUES --------------------------------------------------\n%s\n\n", d)
+			}
 
 			err = helmer.Run(step, step.Values,
 				&r.specialresource,
@@ -247,7 +228,7 @@ func ReconcileChartStates(r *SpecialResourceReconciler, templates *unstructured.
 				r.specialresource.Spec.NodeSelector,
 				RunInfo.KernelFullVersion,
 				RunInfo.OperatingSystemDecimal,
-				false)
+				r.specialresource.Spec.Debug)
 			//exit.OnError(err)
 
 			replicas += 1
@@ -345,14 +326,6 @@ func ReconcileChart(r *SpecialResourceReconciler) error {
 	if templates, err = getChartTemplates(r); err != nil {
 		return errors.Wrap(err, "Cannot get ConfigMap with chart templates")
 	}
-
-	/*
-		err = cache.Nodes(r.specialresource.Spec.NodeSelector, false)
-		exit.OnError(errors.Wrap(err, "Failed to cache Nodes"))
-
-		getRuntimeInformation(r)
-		logRuntimeInformation()
-	*/
 
 	if err := ReconcileChartStates(r, templates); err != nil {
 		return errors.Wrap(err, "Cannot reconcile hardware states")
