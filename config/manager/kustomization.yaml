@@ -6,4 +6,4 @@ kind: Kustomization
 images:
 - name: controller
   newName: quay.io/openshift-psap/special-resource-operator
-  newTag: dagray-vanilla-k8s-helm
+  newTag: vanilla-k8s-helm

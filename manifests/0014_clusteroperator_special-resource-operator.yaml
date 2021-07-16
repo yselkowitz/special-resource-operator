@@ -1,7 +1,7 @@
 apiVersion: config.openshift.io/v1
 kind: ClusterOperator
 metadata:
-  name: operator
+  name: special-resource-operator
   namespace: openshift-special-resource-operator
 spec: {}
 status:

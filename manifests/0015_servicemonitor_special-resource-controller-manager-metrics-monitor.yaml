@@ -3,7 +3,7 @@ kind: ServiceMonitor
 metadata:
   labels:
     control-plane: controller-manager
-  name: controller-manager-metrics-monitor
+  name: special-resource-controller-manager-metrics-monitor
   namespace: openshift-special-resource-operator
 spec:
   endpoints:
