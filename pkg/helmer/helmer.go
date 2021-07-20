@@ -325,7 +325,8 @@ func Run(ch chart.Chart, vals map[string]interface{},
 		operatingSystemMajorMinor)
 
 	if err != nil {
-		install.FailRelease(rel, err)
+		_, err := install.FailRelease(rel, err)
+		warn.OnError(err)
 		return err
 	}
 

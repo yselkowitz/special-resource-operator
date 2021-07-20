@@ -55,11 +55,7 @@ spec:
           value: 0.0.1-snapshot
         - name: SSL_CERT_DIR
           value: /etc/pki/tls/certs
-<<<<<<< HEAD
         image: quay.io/openshift-psap/special-resource-operator:sign-image
-=======
-        image: quay.io/openshift-psap/special-resource-operator:vanilla-k8s-helm
->>>>>>> master
         imagePullPolicy: Always
         name: manager
         resources:

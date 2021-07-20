@@ -1,3 +1,34 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{.Values.specialresource.metadata.name}}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{.Values.specialresource.metadata.name}}
+rules:
+- apiGroups:
+  - security.openshift.io
+  resources:
+  - securitycontextconstraints
+  verbs:
+  - use
+  resourceNames:
+  - anyuid
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{.Values.specialresource.metadata.name}}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{.Values.specialresource.metadata.name}}
+subjects:
+- kind: ServiceAccount
+  name: {{.Values.specialresource.metadata.name}}
+  namespace: {{.Values.specialresource.metadata.namespace}}
 ---
 apiVersion: v1
 kind: Secret
@@ -30,56 +61,60 @@ data:
 
     echo -n "{{ .Values.cosignPassword }}" | /tmp/bin/cosign sign -key /root/key/cosign.key $IMAGE_TO_SIGN
 
-    # startupprobe readonlyfilesystem would prevent writing to /
-    touch /tmp/ready
 
+    sleep infinity
 ---
-apiVersion: v1
-kind: Pod
+apiVersion: apps/v1
+kind: StatefulSet
 metadata:
   annotations:
     specialresource.openshift.io/wait: "true"
-    specialresource.openshift.io/wait-for-logs: "touch /tmp/ready"
+    specialresource.openshift.io/wait-for-logs: "sleep infinity"
   labels:
     app: {{.Values.specialresource.metadata.name}}
   name: {{.Values.specialresource.metadata.name}}
 spec:
-#  serviceAccount: {{.Values.specialresource.metadata.name}}-{{.Values.groupName.driverContainer}}
-#  serviceAccountName: {{.Values.specialresource.metadata.name}}-{{.Values.groupName.driverContainer}}
-  restartPolicy: OnFailure
-  containers:
-  - name: {{.Values.specialresource.metadata.name}}
-    image: registry.access.redhat.com/ubi8:latest
-    env:
-    - name: IMAGE_TO_SIGN
-      value: "{{.Values.imageToSign}}"
-    command: [/bin/entrypoint.sh]
-    volumeMounts:
-      - name: entrypoint
-        mountPath: /bin/entrypoint.sh
-        readOnly: true
-        subPath: entrypoint.sh
+  selector:
+    matchLabels:
+      app: {{.Values.specialresource.metadata.name}}
+  serviceName: {{.Values.specialresource.metadata.name}}
+  replicas: 1 # by default is 1
+  template:
+    metadata:
+      labels:
+        app: {{.Values.specialresource.metadata.name}}
+    spec:
+      serviceAccount: {{.Values.specialresource.metadata.name}}
+      serviceAccountName: {{.Values.specialresource.metadata.name}}
+      terminationGracePeriodSeconds: 10
+      securityContext:
+        runAsUser: 0
+      containers:
+      - name: {{.Values.specialresource.metadata.name}}
+        image: registry.access.redhat.com/ubi8:latest
+        env:
+        - name: IMAGE_TO_SIGN
+          value: "{{.Values.imageToSign}}"
+        command: [/bin/entrypoint.sh]
+        volumeMounts:
+        - name: entrypoint
+          mountPath: /bin/entrypoint.sh
+          readOnly: true
+          subPath: entrypoint.sh
+        - name: dockercfg
+          mountPath: /root/secret
+          readOnly: true
+        - name: cosign
+          mountPath: /root/key
+          readOnly: true
+      volumes:
       - name: dockercfg
-        mountPath: /root/secret
-        readOnly: true
+        secret:
+          secretName: {{.Values.pushSecret}}
+      - name: entrypoint
+        configMap:
+          defaultMode: 0700
+          name: {{.Values.specialresource.metadata.name}}-entrypoint
       - name: cosign
-        mountPath: /root/key
-        readOnly: true
-    startupProbe:
-      exec:
-        command: [sh, -c, 'ls /tmp/ready']
-      initialDelaySeconds: 10
-      failureThreshold: 120
-      successThreshold: 1
-      periodSeconds: 10
-  volumes:
-  - name: dockercfg
-    secret:
-      secretName: {{.Values.pushSecret}}
-  - name: entrypoint
-    configMap:
-      defaultMode: 0700
-      name: {{.Values.specialresource.metadata.name}}-entrypoint
-  - name: cosign
-    secret:
-      secretName: {{.Values.specialresource.metadata.name}}-cosign-key
+        secret:
+          secretName: {{.Values.specialresource.metadata.name}}-cosign-key

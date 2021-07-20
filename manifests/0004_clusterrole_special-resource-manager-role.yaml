@@ -5,7 +5,6 @@ metadata:
   name: special-resource-manager-role
 rules:
 - apiGroups:
-<<<<<<< HEAD
   - '*'
   resources:
   - cronjobs
@@ -17,49 +16,6 @@ rules:
   - update
   - watch
 - apiGroups:
-=======
-  - ""
-  resources:
-  - nodes/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - ""
-  resources:
-  - nodes/status
-  verbs:
-  - patch
-  - update
-- apiGroups:
-  - ""
-  resources:
-  - pods
-  verbs:
-  - deletecollection
-- apiGroups:
-  - ""
-  resources:
-  - podtemplates
-  verbs:
-  - create
-  - get
-  - list
-  - update
-  - watch
-- apiGroups:
-  - ""
-  resources:
-  - podtemplates/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - '*'
-  resources:
-  - cronjobs
-  verbs:
-  - get
-- apiGroups:
->>>>>>> master
   - '*'
   resources:
   - daemonsets
@@ -76,29 +32,21 @@ rules:
   resources:
   - imagepolicies
   verbs:
-<<<<<<< HEAD
   - delete
   - get
   - update
-=======
-  - get
->>>>>>> master
 - apiGroups:
   - '*'
   resources:
   - jobs
   verbs:
   - create
-<<<<<<< HEAD
   - delete
   - get
   - list
   - patch
   - update
   - watch
-=======
-  - get
->>>>>>> master
 - apiGroups:
   - '*'
   resources:
@@ -303,16 +251,7 @@ rules:
   resources:
   - jobs
   verbs:
-<<<<<<< HEAD
   - list
-=======
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
->>>>>>> master
   - watch
 - apiGroups:
   - build.openshift.io
@@ -728,18 +667,6 @@ rules:
   - csi.storage.k8s.io
   resources:
   - csidrivers
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - extensions
-  resources:
-  - jobs
   verbs:
   - create
   - delete

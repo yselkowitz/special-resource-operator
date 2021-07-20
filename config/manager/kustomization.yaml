@@ -6,8 +6,4 @@ kind: Kustomization
 images:
 - name: controller
   newName: quay.io/openshift-psap/special-resource-operator
-<<<<<<< HEAD
   newTag: sign-image
-=======
-  newTag: vanilla-k8s-helm
->>>>>>> master

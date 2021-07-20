@@ -28,7 +28,7 @@ import (
 
 var (
 	RetryInterval = time.Second * 5
-	Timeout       = time.Second * 300
+	Timeout       = time.Second * 30
 	log           logr.Logger
 )
 
@@ -47,6 +47,8 @@ func init() {
 	waitFor["Secret"] = ForSecret
 	waitFor["CustomResourceDefinition"] = ForCRD
 	waitFor["Job"] = ForJob
+	waitFor["Deployment"] = ForDeployment
+	waitFor["StatefulSet"] = ForStatefulSet
 
 	log = zap.New(zap.UseDevMode(true)).WithName(color.Print("wait", color.Brown))
 }
@@ -160,7 +162,9 @@ func ForCRD(obj *unstructured.Unstructured) error {
 		return err
 	}
 
-	clients.Interface.ServerGroups()
+	_, err := clients.Interface.ServerGroups()
+	warn.OnError(err)
+
 	return nil
 }
 
@@ -170,6 +174,103 @@ func ForPod(obj *unstructured.Unstructured) error {
 	}
 	callback := makeStatusCallback(obj, "Succeeded", "status", "phase")
 	return ForResourceFullAvailability(obj, callback)
+}
+
+func ForDeployment(obj *unstructured.Unstructured) error {
+	if err := ForResourceAvailability(obj); err != nil {
+		return err
+	}
+	return ForResourceFullAvailability(obj, func(obj *unstructured.Unstructured) bool {
+
+		labels, found, err := unstructured.NestedMap(obj.Object, "spec", "selector", "matchLabels")
+		warn.OnError(err)
+
+		if !found {
+			return false
+		}
+
+		matchingLabels := make(map[string]string)
+		for k, v := range labels {
+			matchingLabels[k] = v.(string)
+		}
+
+		opts := []client.ListOption{
+			client.InNamespace(obj.GetNamespace()),
+			client.MatchingLabels(matchingLabels),
+		}
+		rss := unstructured.UnstructuredList{}
+		rss.SetKind("ReplicaSetList")
+		rss.SetAPIVersion("apps/v1")
+
+		err = clients.Interface.List(context.TODO(), &rss, opts...)
+		if err != nil {
+			log.Info("Could not get ReplicaSet", "Deployment", obj.GetName(), "error", err)
+			return false
+		}
+
+		for _, rs := range rss.Items {
+			log.Info("Checking ReplicaSet", "name", rs.GetName())
+			status, found, err := unstructured.NestedMap(rs.Object, "status")
+			warn.OnError(err)
+			if !found {
+				log.Info("No status for ReplicaSet", "name", rs.GetName())
+				return false
+			}
+
+			if _, ok := status["availableReplicas"]; !ok {
+				return false
+			}
+			if _, ok := status["replicas"]; !ok {
+				return false
+			}
+
+			avail := status["availableReplicas"].(int64)
+			repls := status["replicas"].(int64)
+
+			if avail == repls {
+				log.Info("Status", "AvailableReplicas", avail, "Replicas", repls)
+				return true
+			}
+
+			log.Info("Status", "AvailableReplicas", avail, "Replicas", repls)
+		}
+		return false
+	})
+}
+
+func ForStatefulSet(obj *unstructured.Unstructured) error {
+	if err := ForResourceAvailability(obj); err != nil {
+		return err
+	}
+	return ForResourceFullAvailability(obj, func(obj *unstructured.Unstructured) bool {
+
+		repls, found, err := unstructured.NestedInt64(obj.Object, "spec", "replicas")
+		warn.OnError(err)
+		if !found {
+			exit.OnError(errors.New("Something went horribly wrong, cannot read .spec.replicas from StatefulSet"))
+		}
+		log.Info("DEBUG", ".spec.replicas", repls)
+		status, found, err := unstructured.NestedMap(obj.Object, "status")
+		warn.OnError(err)
+		if !found {
+			log.Info("No status for StatefulSet", "name", obj.GetName())
+			return false
+		}
+		if _, ok := status["currentReplicas"]; !ok {
+			return false
+		}
+
+		currt := status["currentReplicas"].(int64)
+
+		if repls == currt {
+			log.Info("Status", "Replicas", repls, "CurrentReplicas", currt)
+			return true
+		}
+
+		log.Info("Status", "Replicas", repls, "CurrentReplicas", currt)
+
+		return false
+	})
 }
 
 func ForJob(obj *unstructured.Unstructured) error {
