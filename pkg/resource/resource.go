@@ -67,6 +67,7 @@ func NeedsResourceVersionUpdate(kind string) bool {
 		kind == "ServiceMonitor" ||
 		kind == "Route" ||
 		kind == "Build" ||
+		kind == "BuildRun" ||
 		kind == "BuildConfig" ||
 		kind == "ImageStream" ||
 		kind == "PrometheusRule" ||

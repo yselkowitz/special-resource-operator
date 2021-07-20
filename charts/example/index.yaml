@@ -1,5 +1,6 @@
 apiVersion: v1
 entries:
+<<<<<<< HEAD
   connaisseur:
   - apiVersion: v2
     appVersion: 1.16.0
@@ -22,13 +23,32 @@ entries:
     type: application
     urls:
     - file:///charts/example/multi-build-0.0.1.tgz
+=======
+  centos-simple-kmod:
+  - apiVersion: v2
+    appVersion: 1.0.0
+    created: "2021-07-14T15:07:16.24561711-04:00"
+    description: Simple kmod will deploy a simple kmod driver-container
+    digest: 2a52196d207ce3a8b6879a0f4b2593f868604057502d8b3f70e7ddd7426b3579
+    icon: https://avatars.githubusercontent.com/u/55542927
+    name: centos-simple-kmod
+    type: application
+    urls:
+    - file:///charts/example/centos-simple-kmod-0.0.1.tgz
+>>>>>>> master
     version: 0.0.1
   ping-pong:
   - apiVersion: v2
     appVersion: 1.0.0
+<<<<<<< HEAD
     created: "2021-07-14T10:15:56.87188486Z"
     description: Simple go app to showcase cert-manager intergration
     digest: caca2a3942d6c291dcfa9d78b373671e05c4cb9e3247bfd1c033058f88a5d1ba
+=======
+    created: "2021-07-14T15:07:16.246514439-04:00"
+    description: Simple go app to showcase cert-manager intergration
+    digest: 0bc13563cc623e32a33d5292b640444c35e3c1ac0392873633d01cdec0919bd6
+>>>>>>> master
     icon: https://avatars.githubusercontent.com/u/55542927
     name: ping-pong
     type: application
@@ -38,13 +58,23 @@ entries:
   simple-kmod:
   - apiVersion: v2
     appVersion: 1.0.0
+<<<<<<< HEAD
     created: "2021-07-14T10:15:56.872060054Z"
     description: Simple kmod will deploy a simple kmod driver-container
     digest: 6de1af9c9eade2e10f33408357b654dfdf9855cdb36482bf246a20fabdfb847c
+=======
+    created: "2021-07-14T15:07:16.246665339-04:00"
+    description: Simple kmod will deploy a simple kmod driver-container
+    digest: acc1fda674133fcdab232be1181ac1672703b1b10d1264af86e17a950309fe74
+>>>>>>> master
     icon: https://avatars.githubusercontent.com/u/55542927
     name: simple-kmod
     type: application
     urls:
     - file:///charts/example/simple-kmod-0.0.1.tgz
     version: 0.0.1
+<<<<<<< HEAD
 generated: "2021-07-14T10:15:56.870310715Z"
+=======
+generated: "2021-07-14T15:07:16.245324592-04:00"
+>>>>>>> master
