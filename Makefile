@@ -1,3 +1,4 @@
+SHELL             = /bin/bash
 SPECIALRESOURCE  ?= driver-container-base
 NAMESPACE        ?= openshift-special-resource-operator
 PULLPOLICY       ?= IfNotPresent
@@ -18,7 +19,6 @@ patch:
 	cp .patches/getter.patch.go vendor/helm.sh/helm/v3/pkg/getter/.
 	cp .patches/action.patch.go vendor/helm.sh/helm/v3/pkg/action/.
 	cp .patches/install.patch.go vendor/helm.sh/helm/v3/pkg/action/.
-#	cp .patches/zapr.patch.go vendor/github.com/go-logr/zapr/.
 
 kube-lint: kube-linter
 	$(KUBELINTER) lint $(YAMLFILES)
