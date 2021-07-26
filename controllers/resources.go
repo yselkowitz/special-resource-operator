@@ -36,13 +36,13 @@ func createImagePullerRoleBinding(r *SpecialResourceReconciler) error {
 	rb.SetAPIVersion("rbac.authorization.k8s.io/v1")
 	rb.SetKind("RoleBinding")
 
-	namespacedName := types.NamespacedName{Namespace: r.specialresource.Spec.Namespace, Name: "system:image-puller"}
+	namespacedName := types.NamespacedName{Namespace: r.specialresource.Spec.Namespace, Name: "system:image-pullers"}
 	err := clients.Interface.Get(context.TODO(), namespacedName, rb)
 	if apierrors.IsNotFound(err) {
-		log.Info("Warning: ClusterRole system:image-puller not found. Can be ignored on vanilla k8s.")
+		log.Info("Warning: RoleBinding system:image-pullers not found. Can be ignored on vanilla k8s or when namespace is being created.")
 		return nil
 	} else if err != nil {
-		return errors.Wrap(err, "Error checking for image-puller clusterRole")
+		return errors.Wrap(err, "Error checking for image-pullers roleBinding")
 	}
 
 	newSubject := make(map[string]interface{})
