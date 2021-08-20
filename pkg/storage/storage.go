@@ -5,6 +5,7 @@ import (
 
 	"github.com/openshift-psap/special-resource-operator/pkg/clients"
 	"github.com/openshift-psap/special-resource-operator/pkg/exit"
+	"github.com/openshift-psap/special-resource-operator/pkg/warn"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
@@ -16,7 +17,7 @@ func init() {
 	Driver = "ConfigMap"
 }
 
-func GetConfigMap(namespace string, name string) *unstructured.Unstructured {
+func GetConfigMap(namespace string, name string) (*unstructured.Unstructured, error) {
 
 	cm := &unstructured.Unstructured{}
 	cm.SetAPIVersion("v1")
@@ -27,33 +28,40 @@ func GetConfigMap(namespace string, name string) *unstructured.Unstructured {
 	err := clients.Interface.Get(context.TODO(), dep, cm)
 
 	if apierrors.IsNotFound(err) {
-		exit.OnError(err)
+		warn.OnError(err)
+		return cm, err
 	}
 
-	return cm
+	return cm, err
 }
 
-func CheckConfigMapEntry(key string, ins types.NamespacedName) string {
+func CheckConfigMapEntry(key string, ins types.NamespacedName) (string, error) {
 
-	cm := GetConfigMap(ins.Namespace, ins.Name)
+	cm, err := GetConfigMap(ins.Namespace, ins.Name)
+	if err != nil {
+		return "", err
+	}
 
 	data, found, err := unstructured.NestedMap(cm.Object, "data")
 	exit.OnError(err)
-	// No parent found for depedency just return
+
 	if !found {
-		return ""
+		return "", nil
 	}
-	// We have a dependency return the value
 	if value, found := data[key]; found {
-		return value.(string)
+		return value.(string), nil
 	}
 
-	return ""
+	return "", nil
 }
 
-func UpdateConfigMapEntry(key string, value string, ins types.NamespacedName) {
+func UpdateConfigMapEntry(key string, value string, ins types.NamespacedName) error {
 
-	cm := GetConfigMap(ins.Namespace, ins.Name)
+	cm, err := GetConfigMap(ins.Namespace, ins.Name)
+	if err != nil {
+		warn.OnError(err)
+		return err
+	}
 
 	// Just looking if exists so we can create or update
 	entries, found, err := unstructured.NestedMap(cm.Object, "data")
@@ -69,19 +77,27 @@ func UpdateConfigMapEntry(key string, value string, ins types.NamespacedName) {
 	exit.OnError(err)
 
 	err = clients.Interface.Update(context.TODO(), cm)
-	exit.OnError(err)
+	if err != nil {
+		warn.OnError(err)
+		return err
+	}
+	return nil
 }
 
-func DeleteConfigMapEntry(delete string, ins types.NamespacedName) {
+func DeleteConfigMapEntry(delete string, ins types.NamespacedName) error {
 
-	cm := GetConfigMap(ins.Namespace, ins.Name)
+	cm, err := GetConfigMap(ins.Namespace, ins.Name)
+	if err != nil {
+		warn.OnError(err)
+		return err
+	}
 
 	// Just looking if exists so we can create or update
 	old, found, err := unstructured.NestedMap(cm.Object, "data")
 	exit.OnError(err)
 
 	if !found {
-		return
+		return nil
 	}
 
 	new := make(map[string]interface{})
@@ -96,6 +112,9 @@ func DeleteConfigMapEntry(delete string, ins types.NamespacedName) {
 	exit.OnError(err)
 
 	err = clients.Interface.Update(context.TODO(), cm)
-	exit.OnError(err)
-
+	if err != nil {
+		warn.OnError(err)
+		return err
+	}
+	return nil
 }

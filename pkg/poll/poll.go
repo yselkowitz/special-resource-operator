@@ -370,7 +370,10 @@ func ForLifecycleAvailability(obj *unstructured.Unstructured) error {
 		for _, pod := range pl.Items {
 			log.Info("Checking lifecycle of", "Pod", pod.GetName())
 			hs := hash.FNV64a(pod.GetNamespace() + pod.GetName())
-			value := storage.CheckConfigMapEntry(hs, ins)
+			value, err := storage.CheckConfigMapEntry(hs, ins)
+			if err != nil {
+				return false, err
+			}
 			if value != "" {
 				return false, nil
 			}

@@ -3,12 +3,12 @@ entries:
   infoscale-vtas:
   - apiVersion: v2
     appVersion: 8.0.0.0000
-    created: "2021-08-19T14:26:57.57337197Z"
+    created: "2021-08-20T08:08:24.889723128Z"
     description: A Helm chart for the deployment of Veritas InfoScale Resources
-    digest: 9909d85f5308812f846cde4931c8a598d24f57343828a26ee6790fb754ad9c5c
+    digest: 7bdcda72a52309c6d4f1dc04c6caa9d8ad56d5f4265215b2ab1f5cc07d008a37
     name: infoscale-vtas
     type: application
     urls:
     - file:///charts/infoscale/infoscale-vtas-0.0.1.tgz
     version: 0.0.1
-generated: "2021-08-19T14:26:57.572709265Z"
+generated: "2021-08-20T08:08:24.888815828Z"

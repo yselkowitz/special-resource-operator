@@ -67,7 +67,11 @@ func SpecialResourcesReconcile(r *SpecialResourceReconciler, req ctrl.Request) (
 			Namespace: os.Getenv("OPERATOR_NAMESPACE"),
 			Name:      "special-resource-dependencies",
 		}
-		parent := storage.CheckConfigMapEntry(req.Name, obj)
+		parent, err := storage.CheckConfigMapEntry(req.Name, obj)
+		if err != nil {
+			operatorStatusUpdate(&r.parent, fmt.Sprintf("%v", err))
+			return reconcile.Result{}, err
+		}
 		request, found = FindSR(specialresources.Items, parent, "Name")
 		if !found {
 			return reconcile.Result{}, nil
