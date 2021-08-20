@@ -66,7 +66,7 @@ func GetPodFromDaemonSet(key types.NamespacedName) unstructured.UnstructuredList
 	return pl
 }
 
-func UpdateDaemonSetPods(obj client.Object) {
+func UpdateDaemonSetPods(obj client.Object) error {
 
 	log.Info("UpdateDaemonSetPods")
 
@@ -86,6 +86,12 @@ func UpdateDaemonSetPods(obj client.Object) {
 		hs := hash.FNV64a(pod.GetNamespace() + pod.GetName())
 		value := "*v1.Pod"
 		log.Info(pod.GetName(), "hs", hs, "value", value)
-		storage.UpdateConfigMapEntry(hs, value, ins)
+		err := storage.UpdateConfigMapEntry(hs, value, ins)
+		if err != nil {
+			warn.OnError(err)
+			return err
+		}
 	}
+
+	return nil
 }

@@ -120,7 +120,11 @@ func SpecialResourcesReconcile(r *SpecialResourceReconciler, req ctrl.Request) (
 			Namespace: os.Getenv("OPERATOR_NAMESPACE"),
 			Name:      "special-resource-dependencies",
 		}
-		storage.UpdateConfigMapEntry(r.dependency.Name, r.parent.Name, ins)
+		err = storage.UpdateConfigMapEntry(r.dependency.Name, r.parent.Name, ins)
+		if err != nil {
+			operatorStatusUpdate(&r.parent, fmt.Sprintf("%v", err))
+			return reconcile.Result{}, err
+		}
 
 		var child srov1beta1.SpecialResource
 		// Assign the specialresource to the reconciler object

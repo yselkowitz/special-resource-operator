@@ -12,6 +12,7 @@ import (
 	"github.com/openshift-psap/special-resource-operator/pkg/hash"
 	"github.com/openshift-psap/special-resource-operator/pkg/lifecycle"
 	"github.com/openshift-psap/special-resource-operator/pkg/storage"
+	"github.com/openshift-psap/special-resource-operator/pkg/warn"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -206,7 +207,8 @@ func Predicate() predicate.Predicate {
 					"Name", obj.GetName(), "Type", reflect.TypeOf(obj).String())
 
 				if reflect.TypeOf(obj).String() == "*v1.DaemonSet" {
-					lifecycle.UpdateDaemonSetPods(obj)
+					err := lifecycle.UpdateDaemonSetPods(obj)
+					warn.OnError(err)
 				}
 
 				return true
@@ -232,7 +234,8 @@ func Predicate() predicate.Predicate {
 					Name:      "special-resource-lifecycle",
 				}
 				key := hash.FNV64a(obj.GetNamespace() + obj.GetName())
-				storage.DeleteConfigMapEntry(key, ins)
+				err := storage.DeleteConfigMapEntry(key, ins)
+				warn.OnError(err)
 
 				return true
 			}
