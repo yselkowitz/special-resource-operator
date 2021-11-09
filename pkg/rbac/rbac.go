@@ -124,7 +124,7 @@ package rbac
 // +kubebuilder:rbac:groups=networking.x-k8s.io,resources=httproutes,verbs=get;list;watch;create;update;delete
 // +kubebuilder:rbac:groups=networking.x-k8s.io,resources=gateways,verbs=get;list;watch
 // +kubebuilder:rbac:groups=networking.x-k8s.io,resources=gateways/finalizers,verbs=update
-// +kubebuilder:rbac:groups=networking.x-k8s.io,resources=httproutes/finalisers,verbs=update
+// +kubebuilder:rbac:groups=networking.x-k8s.io,resources=httproutes/finalizers,verbs=update
 // +kubebuilder:rbac:groups=infoscale.veritas.com,resources=infoscaleclusters,verbs=update;patch;get;list
 // +kubebuilder:rbac:groups=fpga.silicom.dk,resources=*,verbs=list;watch;get;create;update;patch;delete
 // +kubebuilder:rbac:groups=sts.silicom.com,resources=*,verbs=list;watch;get;create;update;patch;delete
